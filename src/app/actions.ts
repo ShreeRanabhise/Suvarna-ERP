@@ -410,3 +410,116 @@ export async function deleteStaffMember(staffId: string) {
   return { success: true }
 }
 
+const branchSchema = z.object({
+  name: z.string().min(1, 'Branch name is required'),
+})
+
+export async function createBranch(formData: FormData) {
+  const { shopId, userId, role } = await getTenantContext()
+
+  // 1. Authorization: Only OWNER can manage branches
+  if (role !== 'OWNER') {
+    throw new Error('Forbidden: Only shop owners can manage branches')
+  }
+
+  // 2. Plan Check: Only ENTERPRISE shops can manage branches
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+  })
+  if (shop?.subscriptionPlan !== 'ENTERPRISE') {
+    throw new Error('Branch management is only available on Enterprise plans')
+  }
+
+  const data = {
+    name: formData.get('name') as string,
+  }
+
+  const parsed = branchSchema.parse(data)
+
+  // 3. Check duplicate branch name in shop
+  const existingBranch = await prisma.branch.findFirst({
+    where: { shopId, name: parsed.name }
+  })
+  if (existingBranch) {
+    throw new Error('A branch with this name already exists in your shop')
+  }
+
+  // 4. Create branch
+  const branch = await prisma.branch.create({
+    data: {
+      name: parsed.name,
+      shopId,
+    }
+  })
+
+  // 5. Write Audit Log
+  await prisma.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'CREATE_BRANCH',
+      entity: 'BRANCH',
+      entityId: branch.id,
+      details: JSON.stringify({ name: branch.name })
+    }
+  })
+
+  revalidatePath('/dashboard/branches')
+  revalidatePath('/dashboard/staff')
+  return { success: true, branch }
+}
+
+export async function deleteBranch(branchId: string) {
+  const { shopId, userId, role } = await getTenantContext()
+
+  // 1. Authorization: Only OWNER can manage branches
+  if (role !== 'OWNER') {
+    throw new Error('Forbidden: Only shop owners can manage branches')
+  }
+
+  // 2. Find and verify branch belongs to same shop
+  const branch = await prisma.branch.findFirst({
+    where: { id: branchId, shopId },
+    include: {
+      _count: {
+        select: { users: true, customers: true, loans: true }
+      }
+    }
+  })
+  if (!branch) {
+    throw new Error('Branch not found')
+  }
+
+  // 3. Safety Check: Cannot delete if it has active links (cascade protection)
+  if (branch._count.users > 0) {
+    throw new Error('Cannot delete branch: Active staff members are still assigned to it.')
+  }
+  if (branch._count.customers > 0) {
+    throw new Error('Cannot delete branch: Customers are still associated with it.')
+  }
+  if (branch._count.loans > 0) {
+    throw new Error('Cannot delete branch: Active loans are still registered at it.')
+  }
+
+  // 4. Delete branch
+  await prisma.branch.delete({
+    where: { id: branchId }
+  })
+
+  // 5. Write Audit Log
+  await prisma.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'DELETE_BRANCH',
+      entity: 'BRANCH',
+      entityId: branchId,
+      details: JSON.stringify({ name: branch.name })
+    }
+  })
+
+  revalidatePath('/dashboard/branches')
+  revalidatePath('/dashboard/staff')
+  return { success: true }
+}
+
