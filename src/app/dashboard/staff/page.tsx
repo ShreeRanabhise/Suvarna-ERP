@@ -55,7 +55,7 @@ export default async function StaffPage() {
   // Fetch staff
   const staff = await prisma.user.findMany({
     where: {
-      shopId: dbUser.shopId,
+      shopId: dbUser.shop.id,
       role: 'STAFF',
     },
     include: {
@@ -69,7 +69,7 @@ export default async function StaffPage() {
   // Fetch branches
   const branches = await prisma.branch.findMany({
     where: {
-      shopId: dbUser.shopId,
+      shopId: dbUser.shop.id,
     },
     orderBy: {
       name: 'asc',
