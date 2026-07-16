@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Users, LayoutDashboard, FileText, Settings, LogOut, Banknote } from "lucide-react"
+import { Users, LayoutDashboard, FileText, Settings, LogOut, Banknote, UserCheck } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { logout } from "@/app/login/actions"
 import { PrismaClient } from "@prisma/client"
@@ -73,6 +73,15 @@ export default async function DashboardLayout({
               <FileText className="h-4 w-4" />
               Reports
             </Link>
+            {dbUser.role === 'OWNER' && (
+              <Link
+                href="/dashboard/staff"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
+              >
+                <UserCheck className="h-4 w-4" />
+                Staff Management
+              </Link>
+            )}
           </nav>
         </div>
         <div className="mt-auto p-4 border-t">

@@ -308,3 +308,105 @@ export async function onboardCustomerWithLoan(formData: FormData) {
   return { success: true, ...result }
 }
 
+const staffSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  branchId: z.string().uuid().optional().or(z.literal('')),
+})
+
+export async function createStaffMember(formData: FormData) {
+  const { shopId, userId, role } = await getTenantContext()
+
+  // 1. Authorization: Only OWNER can add staff
+  if (role !== 'OWNER') {
+    throw new Error('Forbidden: Only shop owners can manage staff')
+  }
+
+  // 2. Plan Check: Only ENTERPRISE shops can add staff
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+  })
+  if (shop?.subscriptionPlan !== 'ENTERPRISE') {
+    throw new Error('Staff management is only available on Enterprise plans')
+  }
+
+  const data = {
+    name: formData.get('name') as string,
+    email: formData.get('email') as string,
+    branchId: formData.get('branchId') as string,
+  }
+
+  const parsed = staffSchema.parse(data)
+
+  // 3. Check duplicate email in public.User
+  const existingUser = await prisma.user.findUnique({
+    where: { email: parsed.email }
+  })
+  if (existingUser) {
+    throw new Error('A user with this email address already exists')
+  }
+
+  // 4. Create the staff member
+  const staff = await prisma.user.create({
+    data: {
+      email: parsed.email,
+      name: parsed.name,
+      role: 'STAFF',
+      shopId,
+      branchId: parsed.branchId || null,
+    }
+  })
+
+  // 5. Write Audit Log
+  await prisma.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'CREATE_STAFF_MEMBER',
+      entity: 'USER',
+      entityId: staff.id,
+      details: JSON.stringify({ email: staff.email, name: staff.name, branchId: staff.branchId })
+    }
+  })
+
+  revalidatePath('/dashboard/staff')
+  return { success: true, staff }
+}
+
+export async function deleteStaffMember(staffId: string) {
+  const { shopId, userId, role } = await getTenantContext()
+
+  // 1. Authorization: Only OWNER can delete staff
+  if (role !== 'OWNER') {
+    throw new Error('Forbidden: Only shop owners can manage staff')
+  }
+
+  // 2. Find and verify staff belongs to same shop
+  const staff = await prisma.user.findFirst({
+    where: { id: staffId, shopId, role: 'STAFF' }
+  })
+  if (!staff) {
+    throw new Error('Staff member not found')
+  }
+
+  // 3. Delete the staff member
+  await prisma.user.delete({
+    where: { id: staffId }
+  })
+
+  // 4. Write Audit Log
+  await prisma.auditLog.create({
+    data: {
+      shopId,
+      userId,
+      action: 'DELETE_STAFF_MEMBER',
+      entity: 'USER',
+      entityId: staffId,
+      details: JSON.stringify({ email: staff.email, name: staff.name })
+    }
+  })
+
+  revalidatePath('/dashboard/staff')
+  return { success: true }
+}
+
