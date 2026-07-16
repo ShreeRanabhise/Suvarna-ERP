@@ -70,9 +70,21 @@ export default function CreateCustomerDialog() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Address</label>
+                <label className="block text-sm font-medium mb-1">Aadhaar Number (12 digits) *</label>
+                <input
+                  name="aadhaar"
+                  required
+                  maxLength={12}
+                  placeholder="123456789012"
+                  className="w-full px-3 py-2 border rounded-md bg-transparent font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Address *</label>
                 <textarea
                   name="address"
+                  required
                   className="w-full px-3 py-2 border rounded-md bg-transparent"
                 />
               </div>

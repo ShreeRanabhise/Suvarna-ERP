@@ -12,7 +12,8 @@ const customerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().min(10, 'Valid phone number required'),
-  address: z.string().optional(),
+  aadhaar: z.string().min(12, '12-digit Aadhaar required').max(12),
+  address: z.string().min(1, 'Address is required'),
 })
 
 const loanSchema = z.object({
@@ -64,6 +65,7 @@ export async function createCustomer(formData: FormData) {
     firstName: formData.get('firstName') as string,
     lastName: formData.get('lastName') as string,
     phone: formData.get('phone') as string,
+    aadhaar: formData.get('aadhaar') as string,
     address: formData.get('address') as string,
   }
 
