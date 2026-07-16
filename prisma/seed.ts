@@ -78,6 +78,7 @@ async function main() {
       firstName: 'Ramesh',
       lastName: 'Kumar',
       phone: '9876543210',
+      aadhaar: '123456789012',
       address: '123 Market St, Mumbai'
     }
   })
