@@ -16,7 +16,7 @@ export default async function StaffPage() {
     where: { email: user.email! },
     include: { shop: true }
   })
-  if (!dbUser || !dbUser.shopId) redirect('/login')
+  if (!dbUser || !dbUser.shop) redirect('/login')
 
   // Check role: Only OWNER
   if (dbUser.role !== 'OWNER') {
