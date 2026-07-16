@@ -1,4 +1,4 @@
-import { Users, Banknote, TrendingUp, AlertCircle } from "lucide-react"
+import { Users, Banknote, TrendingUp, AlertCircle, Scale } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { PrismaClient } from "@prisma/client"
 import { redirect } from "next/navigation"
@@ -58,6 +58,21 @@ export default async function DashboardPage() {
     }
   })
 
+  // 5. Total Gold Reserved (weight of pledged items for active loans)
+  const goldReservedAgg = await prisma.pledgedItem.aggregate({
+    where: {
+      loan: {
+        shopId,
+        status: 'ACTIVE',
+        isDeleted: false
+      }
+    },
+    _sum: {
+      weightGrams: true
+    }
+  })
+  const totalGoldReserved = goldReservedAgg._sum.weightGrams || 0
+
   // 5. Query recent 5 payments
   const recentPayments = await prisma.payment.findMany({
     where: {
@@ -116,7 +131,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <h2 className="text-3xl font-heading tracking-tight">Overview</h2>
       
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* KPI Cards */}
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
@@ -148,6 +163,17 @@ export default async function DashboardPage() {
           <div className="p-6 pt-0">
             <div className="text-2xl font-bold font-mono text-primary">{formatINR(outstandingBalance)}</div>
             <p className="text-xs text-muted-foreground">Across all active loans</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Gold Reserved</h3>
+            <Scale className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold font-mono text-primary">{totalGoldReserved.toFixed(2)} g</div>
+            <p className="text-xs text-muted-foreground">Total weight of pledged gold</p>
           </div>
         </div>
 
