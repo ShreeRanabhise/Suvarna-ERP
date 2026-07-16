@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  STAFF
+}
+
+enum Plan {
+  STANDARD
+  ENTERPRISE
+}
+
+enum LoanStatus {
+  ACTIVE
+  CLOSED
+  OVERDUE
+  AUCTION
+  RENEWED
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  BANK
+  CHEQUE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(OWNER)
+  shopId    String?  
+  branchId  String?  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  shop      Shop?    @relation(fields: [shopId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  auditLogs AuditLog[]
+}
+
+model Shop {
+  id               String       @id @default(uuid())
+  name             String
+  subscriptionPlan Plan         @default(STANDARD)
+  subscriptionEnd  DateTime
+  whatsappAddon    Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  
+  users            User[]
+  branches         Branch[]
+  customers        Customer[]
+  loans            Loan[]
+  auditLogs        AuditLog[]
+  notificationLogs NotificationLog[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  shopId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  users     User[]
+  customers Customer[]
+  loans     Loan[]
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  shopId      String
+  branchId    String?
+  firstName   String   // Will store full Name
+  lastName    String   @default("")
+  phone       String   // Mobile
+  email       String?  // Optional email
+  aadhaar     String   // Required Aadhaar
+  pan         String?
+  address     String   // Required Address
+  documentUrl String?
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  branch     Branch?  @relation(fields: [branchId], references: [id])
+  loans      Loan[]
+}
+
+model Loan {
+  id             String     @id @default(uuid())
+  loanNumber     String     @unique // e.g. SGL-2024-0001
+  shopId         String
+  branchId       String?
+  customerId     String
+  principalAmount Float
+  interestRate   Float      // Monthly interest rate percentage
+  ltvPercentage  Float
+  status         LoanStatus @default(ACTIVE)
+  startDate      DateTime   @default(now())
+  endDate        DateTime?  // Expected or actual closure date
+  isDeleted      Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  branch         Branch?       @relation(fields: [branchId], references: [id])
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  pledgedItems   PledgedItem[]
+  payments       Payment[]
+}
+
+model PledgedItem {
+  id          String   @id @default(uuid())
+  loanId      String
+  name        String   // e.g. Gold Chain
+  weightGrams Float
+  purity      String   // e.g. 22K
+  valuation   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  loan        Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String      @id @default(uuid())
+  loanId        String
+  amountPaid    Float
+  principalPaid Float       @default(0)
+  interestPaid  Float       @default(0)
+  paymentDate   DateTime    @default(now())
+  paymentMode   PaymentMode @default(CASH)
+  referenceId   String?     // For UPI/Bank transfers
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id        String   @id @default(uuid())
+  shopId    String
+  type      String   // e.g. WHATSAPP, SMS
+  recipient String   // Phone number
+  message   String
+  status    String   // SENT, FAILED
+  createdAt DateTime @default(now())
+
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  shopId    String?  // Null for Super Admin actions
+  userId    String
+  action    String   // e.g. CREATE_LOAN, DELETE_CUSTOMER
+  entity    String   // e.g. LOAN, CUSTOMER
+  entityId  String
+  details   String?  // JSON stringified details
+  createdAt DateTime @default(now())
+
+  shop      Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
