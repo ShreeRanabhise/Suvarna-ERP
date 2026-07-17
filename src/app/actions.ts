@@ -76,11 +76,31 @@ export async function createCustomer(formData: FormData) {
 
   const parsed = customerSchema.parse(data)
 
-  const customer = await prisma.customer.create({
-    data: {
-      ...parsed,
-      shopId,
-    }
+  const customer = await prisma.$transaction(async (tx) => {
+    const newCustomer = await tx.customer.create({
+      data: {
+        ...parsed,
+        shopId,
+      }
+    })
+
+    // Write initial KYC Version
+    await tx.customerKYCVersion.create({
+      data: {
+        customerId: newCustomer.id,
+        version: 1,
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        phone: parsed.phone,
+        email: null,
+        aadhaar: parsed.aadhaar,
+        address: parsed.address,
+        changedById: userId,
+        reason: 'Initial registration'
+      }
+    })
+
+    return newCustomer
   })
 
   await prisma.auditLog.create({
@@ -140,6 +160,31 @@ export async function createLoan(formData: FormData) {
             valuation: parsed.valuation
           }
         }
+      }
+    })
+
+    // Record disbursement debit in double-entry ledger
+    await tx.ledgerEntry.create({
+      data: {
+        shopId,
+        loanId: newLoan.id,
+        category: 'PRINCIPAL',
+        type: 'DEBIT',
+        amount: parsed.principalAmount,
+        balanceAfter: parsed.principalAmount,
+        performedBy: userId,
+        idempotencyKey: `disburse-loan-principal-${newLoan.id}`
+      }
+    })
+
+    // Log state machine status initialization
+    await tx.loanStateHistory.create({
+      data: {
+        loanId: newLoan.id,
+        fromStatus: 'ACTIVE',
+        toStatus: 'ACTIVE',
+        changedById: userId,
+        details: 'Initial disburse'
       }
     })
 
@@ -275,6 +320,22 @@ export async function onboardCustomerWithLoan(formData: FormData) {
       }
     })
 
+    // Write initial KYC Version
+    await tx.customerKYCVersion.create({
+      data: {
+        customerId: customer.id,
+        version: 1,
+        firstName: parsed.name,
+        lastName: '',
+        phone: parsed.phone,
+        email: parsed.email || null,
+        aadhaar: parsed.aadhaar,
+        address: parsed.address,
+        changedById: userId,
+        reason: 'Initial registration via onboarding'
+      }
+    })
+
     // B. Create Loan
     const loan = await tx.loan.create({
       data: {
@@ -292,6 +353,31 @@ export async function onboardCustomerWithLoan(formData: FormData) {
             valuation: parsed.valuation
           }
         }
+      }
+    })
+
+    // Record disbursement debit in double-entry ledger
+    await tx.ledgerEntry.create({
+      data: {
+        shopId,
+        loanId: loan.id,
+        category: 'PRINCIPAL',
+        type: 'DEBIT',
+        amount: parsed.principalAmount,
+        balanceAfter: parsed.principalAmount,
+        performedBy: userId,
+        idempotencyKey: `onboard-loan-principal-${loan.id}`
+      }
+    })
+
+    // Log state machine status initialization
+    await tx.loanStateHistory.create({
+      data: {
+        loanId: loan.id,
+        fromStatus: 'ACTIVE',
+        toStatus: 'ACTIVE',
+        changedById: userId,
+        details: 'Initial disburse via onboarding'
       }
     })
 
@@ -539,6 +625,21 @@ export async function deleteBranch(branchId: string) {
   return { success: true }
 }
 
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  ACTIVE: ['OVERDUE', 'CLOSED', 'RENEWED'],
+  OVERDUE: ['AUCTION', 'ACTIVE', 'CLOSED'],
+  AUCTION: ['ACTIVE', 'CLOSED'],
+  CLOSED: [],
+  RENEWED: []
+}
+
+function validateStateTransition(from: string, to: string) {
+  const allowed = VALID_TRANSITIONS[from] || []
+  if (from !== to && !allowed.includes(to)) {
+    throw new Error(`Invalid status transition from ${from} to ${to}`)
+  }
+}
+
 export async function repayLoan(formData: FormData) {
   const { shopId, userId } = await getTenantContext()
   
@@ -590,14 +691,64 @@ export async function repayLoan(formData: FormData) {
     // 5. Update loan status and close it if fully settled
     const finalOutstandingPrincipal = balances.outstandingPrincipal - principalPaid
     const isFullyPaid = finalOutstandingPrincipal <= 0.01 // handle minor differences
+    const targetStatus = isFullyPaid ? 'CLOSED' : loan.status
+
+    if (isFullyPaid) {
+      validateStateTransition(loan.status, 'CLOSED')
+    }
 
     await tx.loan.update({
       where: { id: loanId },
       data: {
-        status: isFullyPaid ? 'CLOSED' : loan.status,
+        status: targetStatus,
         endDate: isFullyPaid ? new Date() : loan.endDate
       }
     })
+
+    // Write to double-entry ledger entries
+    if (interestPaid > 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          shopId,
+          loanId,
+          paymentId: newPayment.id,
+          category: 'INTEREST',
+          type: 'CREDIT',
+          amount: interestPaid,
+          balanceAfter: Math.max(0, balances.interestDue - interestPaid),
+          performedBy: userId,
+          idempotencyKey: `repay-interest-${newPayment.id}`
+        }
+      })
+    }
+
+    if (principalPaid > 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          shopId,
+          loanId,
+          paymentId: newPayment.id,
+          category: 'PRINCIPAL',
+          type: 'CREDIT',
+          amount: principalPaid,
+          balanceAfter: finalOutstandingPrincipal,
+          performedBy: userId,
+          idempotencyKey: `repay-principal-${newPayment.id}`
+        }
+      })
+    }
+
+    if (isFullyPaid) {
+      await tx.loanStateHistory.create({
+        data: {
+          loanId,
+          fromStatus: loan.status,
+          toStatus: 'CLOSED',
+          changedById: userId,
+          details: 'Loan fully paid off'
+        }
+      })
+    }
 
     // 6. Write to Audit Trail
     await tx.auditLog.create({
@@ -633,14 +784,26 @@ export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSE
 
   const loan = await prisma.loan.findFirst({
     where: { id: loanId, shopId },
-    select: { id: true, customerId: true }
+    select: { id: true, customerId: true, status: true }
   })
   if (!loan) throw new Error('Loan not found')
+
+  validateStateTransition(loan.status, status)
 
   await prisma.$transaction(async (tx) => {
     await tx.loan.update({
       where: { id: loanId },
       data: { status }
+    })
+
+    await tx.loanStateHistory.create({
+      data: {
+        loanId,
+        fromStatus: loan.status,
+        toStatus: status,
+        changedById: userId,
+        details: 'Manual status update via dashboard'
+      }
     })
 
     await tx.auditLog.create({
