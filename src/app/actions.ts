@@ -218,14 +218,15 @@ export async function recordPayment(formData: FormData) {
 
   const parsed = paymentSchema.parse(data)
 
-  // Verify loan belongs to shop
+  // Verify loan belongs to shop and get current version
   const loan = await prisma.loan.findFirst({
     where: { id: parsed.loanId, shopId },
-    select: { id: true }
+    select: { id: true, version: true }
   })
   if (!loan) throw new Error('Loan not found')
 
   const payment = await prisma.$transaction(async (tx) => {
+    // 1. Create Payment Record
     const newPayment = await tx.payment.create({
       data: {
         loanId: parsed.loanId,
@@ -236,6 +237,54 @@ export async function recordPayment(formData: FormData) {
       }
     })
 
+    // 2. Fetch the latest Principal and Interest Ledgers for balanceAfter calculations
+    const lastPrincipalLedger = await tx.ledgerEntry.findFirst({
+      where: { loanId: parsed.loanId, category: 'PRINCIPAL' },
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    // 3. Create Principal Credit Ledger Entry if principal was paid
+    if (parsed.principalPaid > 0) {
+      const currentPrincipalBal = lastPrincipalLedger ? Number(lastPrincipalLedger.balanceAfter) : 0;
+      await tx.ledgerEntry.create({
+        data: {
+          shopId,
+          loanId: parsed.loanId,
+          paymentId: newPayment.id,
+          category: 'PRINCIPAL',
+          type: 'CREDIT',
+          amount: parsed.principalPaid,
+          balanceAfter: currentPrincipalBal - parsed.principalPaid,
+          performedBy: userId,
+          idempotencyKey: `payment-prin-${newPayment.id}`
+        }
+      })
+    }
+
+    // 4. Create Interest Credit Ledger Entry if interest was paid
+    if (parsed.interestPaid > 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          shopId,
+          loanId: parsed.loanId,
+          paymentId: newPayment.id,
+          category: 'INTEREST',
+          type: 'CREDIT',
+          amount: parsed.interestPaid,
+          balanceAfter: 0, // Interest usually doesn't have a rolling balance stored here unless amortized
+          performedBy: userId,
+          idempotencyKey: `payment-int-${newPayment.id}`
+        }
+      })
+    }
+
+    // 5. Optimistic locking: Increment loan version
+    await tx.loan.update({
+      where: { id: parsed.loanId, version: loan.version },
+      data: { version: { increment: 1 } }
+    })
+
+    // 6. Audit Log
     await tx.auditLog.create({
       data: {
         shopId,
