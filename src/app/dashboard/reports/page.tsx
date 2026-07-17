@@ -18,28 +18,28 @@ export default async function ReportsPage() {
 
   const shopId = dbUser.shopId
 
-  // Fetch all loans with details
-  const loans = await prisma.loan.findMany({
-    where: { shopId, isDeleted: false },
-    include: {
-      customer: true,
-      pledgedItems: true,
-      payments: true
-    }
-  })
-
-  // Fetch all payments directly
-  const payments = await prisma.payment.findMany({
-    where: {
-      loan: { shopId, isDeleted: false }
-    },
-    include: {
-      loan: {
-        include: { customer: true }
+  // Fetch all loans and payments in parallel
+  const [loans, payments] = await Promise.all([
+    prisma.loan.findMany({
+      where: { shopId, isDeleted: false },
+      include: {
+        customer: true,
+        pledgedItems: true,
+        payments: true
       }
-    },
-    orderBy: { paymentDate: 'desc' }
-  })
+    }),
+    prisma.payment.findMany({
+      where: {
+        loan: { shopId, isDeleted: false }
+      },
+      include: {
+        loan: {
+          include: { customer: true }
+        }
+      },
+      orderBy: { paymentDate: 'desc' }
+    })
+  ])
 
   // Financial calculations
   let totalDisbursed = 0

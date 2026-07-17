@@ -26,84 +26,85 @@ export default async function DashboardPage() {
 
   const shopId = dbUser.shopId
 
-  // 1. Total Customers count
-  const totalCustomers = await prisma.customer.count({
-    where: { shopId, isDeleted: false }
-  })
-
-  // 2. Active Loans count
-  const activeLoansCount = await prisma.loan.count({
-    where: { shopId, status: 'ACTIVE', isDeleted: false }
-  })
-
-  // 3. Sum of outstanding principal balance for active loans
-  const outstandingAgg = await prisma.loan.aggregate({
-    where: { shopId, status: 'ACTIVE', isDeleted: false },
-    _sum: { principalAmount: true }
-  })
-  const outstandingBalance = Number(outstandingAgg._sum.principalAmount || 0)
-
-  // 4. Active Loans due/expired by the end of this month
+  // 1. Calculate dates needed for queries
   const now = new Date()
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
-  const dueThisMonthCount = await prisma.loan.count({
-    where: {
-      shopId,
-      status: 'ACTIVE',
-      isDeleted: false,
-      endDate: {
-        lte: endOfMonth
-      }
-    }
-  })
+  const sixMonthsAgo = new Date()
 
-  // 5. Total Gold Reserved (weight of pledged items for active loans)
-  const goldReservedAgg = await prisma.pledgedItem.aggregate({
-    where: {
-      loan: {
+  // 2. Fetch all queries in parallel
+  const [
+    totalCustomers,
+    activeLoansCount,
+    outstandingAgg,
+    dueThisMonthCount,
+    goldReservedAgg,
+    recentPayments,
+    disbursements
+  ] = await Promise.all([
+    prisma.customer.count({
+      where: { shopId, isDeleted: false }
+    }),
+    prisma.loan.count({
+      where: { shopId, status: 'ACTIVE', isDeleted: false }
+    }),
+    prisma.loan.aggregate({
+      where: { shopId, status: 'ACTIVE', isDeleted: false },
+      _sum: { principalAmount: true }
+    }),
+    prisma.loan.count({
+      where: {
         shopId,
         status: 'ACTIVE',
-        isDeleted: false
-      }
-    },
-    _sum: {
-      weightGrams: true
-    }
-  })
-  const totalGoldReserved = Number(goldReservedAgg._sum.weightGrams || 0)
-
-  // 5. Query recent 5 payments
-  const recentPayments = await prisma.payment.findMany({
-    where: {
-      loan: {
-        shopId,
-        isDeleted: false
-      }
-    },
-    include: {
-      loan: {
-        include: {
-          customer: true
+        isDeleted: false,
+        endDate: {
+          lte: endOfMonth
         }
       }
-    },
-    orderBy: { paymentDate: 'desc' },
-    take: 5
-  })
+    }),
+    prisma.pledgedItem.aggregate({
+      where: {
+        loan: {
+          shopId,
+          status: 'ACTIVE',
+          isDeleted: false
+        }
+      },
+      _sum: {
+        weightGrams: true
+      }
+    }),
+    prisma.payment.findMany({
+      where: {
+        loan: {
+          shopId,
+          isDeleted: false
+        }
+      },
+      include: {
+        loan: {
+          include: {
+            customer: true
+          }
+        }
+      },
+      orderBy: { paymentDate: 'desc' },
+      take: 5
+    }),
+    prisma.loan.findMany({
+      where: {
+        shopId,
+        isDeleted: false,
+        startDate: { gte: sixMonthsAgo }
+      },
+      select: {
+        principalAmount: true,
+        startDate: true
+      }
+    })
+  ])
 
-  // 6. Query monthly disbursements (last 6 months)
-  const sixMonthsAgo = new Date()
-  const disbursements = await prisma.loan.findMany({
-    where: {
-      shopId,
-      isDeleted: false,
-      startDate: { gte: sixMonthsAgo }
-    },
-    select: {
-      principalAmount: true,
-      startDate: true
-    }
-  })
+  const outstandingBalance = Number(outstandingAgg._sum.principalAmount || 0)
+  const totalGoldReserved = Number(goldReservedAgg._sum.weightGrams || 0)
 
   const monthlyDisbursementsData = Array.from({ length: 6 }).map((_, idx) => {
     const date = new Date()
