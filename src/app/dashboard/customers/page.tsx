@@ -1,7 +1,7 @@
 import Link from "next/link"
 import OnboardCustomerDialog from "@/components/onboard-customer-dialog"
 import SearchInput from "@/components/search-input"
-import { createClient } from "@/lib/supabase/server"
+import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { ArrowRight, User } from "lucide-react"
@@ -11,13 +11,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ query?: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
-  })
+  const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
   const { query } = await searchParams

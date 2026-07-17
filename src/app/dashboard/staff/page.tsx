@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AddStaffDialog from "@/components/add-staff-dialog"
@@ -6,14 +6,7 @@ import DeleteStaffButton from "@/components/delete-staff-button"
 import { Users, Building, ShieldAlert, Award, Sparkles, User, Badge } from "lucide-react"
 
 export default async function StaffPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! },
-    include: { shop: true }
-  })
+  const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shop) redirect('/login')
 
   // Check role: Only OWNER

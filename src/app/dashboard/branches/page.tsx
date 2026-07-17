@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AddBranchDialog from "@/components/add-branch-dialog"
@@ -6,14 +6,7 @@ import DeleteBranchButton from "@/components/delete-branch-button"
 import { Building, Users, Banknote, Award, Sparkles, Calendar } from "lucide-react"
 
 export default async function BranchesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! },
-    include: { shop: true }
-  })
+  const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shop) redirect('/login')
 
   // Check role: Only OWNER

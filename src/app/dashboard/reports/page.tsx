@@ -1,19 +1,14 @@
 import { redirect } from 'next/navigation'
 import { Landmark, Scale, DollarSign, Wallet, FileText, ChevronRight, Activity, AlertTriangle, ArrowRight } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
 import ExportButton from '@/components/export-button'
 import Link from 'next/link'
 
-export default async function ReportsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+import { getCachedUser } from '@/lib/user'
 
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
-  })
+export default async function ReportsPage() {
+  const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
   const shopId = dbUser.shopId

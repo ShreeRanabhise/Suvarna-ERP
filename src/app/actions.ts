@@ -41,7 +41,10 @@ async function getTenantContext() {
   if (!user) throw new Error('Unauthorized')
 
   // In a real implementation, we'd fetch the user from our DB to get their shopId and role
-  const dbUser = await prisma.user.findUnique({ where: { email: user.email } })
+  const dbUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { id: true, shopId: true, role: true }
+  })
   if (!dbUser || !dbUser.shopId) throw new Error('No tenant associated')
 
   return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role }
@@ -53,7 +56,10 @@ export async function createCustomer(formData: FormData) {
   // Check subscription limits (max 100 customers for Standard)
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
-    include: { _count: { select: { customers: true } } }
+    select: {
+      subscriptionPlan: true,
+      _count: { select: { customers: true } }
+    }
   })
 
   if (shop?.subscriptionPlan === 'STANDARD' && shop._count.customers >= 100) {
@@ -169,7 +175,8 @@ export async function recordPayment(formData: FormData) {
 
   // Verify loan belongs to shop
   const loan = await prisma.loan.findFirst({
-    where: { id: parsed.loanId, shopId }
+    where: { id: parsed.loanId, shopId },
+    select: { id: true }
   })
   if (!loan) throw new Error('Loan not found')
 
@@ -220,7 +227,10 @@ export async function onboardCustomerWithLoan(formData: FormData) {
   // 1. Subscription Check (Standard Limit: 100 Customers)
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
-    include: { _count: { select: { customers: true } } }
+    select: {
+      subscriptionPlan: true,
+      _count: { select: { customers: true } }
+    }
   })
   if (shop?.subscriptionPlan === 'STANDARD' && shop._count.customers >= 100) {
     throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
@@ -324,6 +334,7 @@ export async function createStaffMember(formData: FormData) {
   // 2. Plan Check: Only ENTERPRISE shops can add staff
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
+    select: { subscriptionPlan: true }
   })
   if (shop?.subscriptionPlan !== 'ENTERPRISE') {
     throw new Error('Staff management is only available on Enterprise plans')
@@ -339,7 +350,8 @@ export async function createStaffMember(formData: FormData) {
 
   // 3. Check duplicate email in public.User
   const existingUser = await prisma.user.findUnique({
-    where: { email: parsed.email }
+    where: { email: parsed.email },
+    select: { id: true }
   })
   if (existingUser) {
     throw new Error('A user with this email address already exists')
@@ -382,7 +394,8 @@ export async function deleteStaffMember(staffId: string) {
 
   // 2. Find and verify staff belongs to same shop
   const staff = await prisma.user.findFirst({
-    where: { id: staffId, shopId, role: 'STAFF' }
+    where: { id: staffId, shopId, role: 'STAFF' },
+    select: { id: true, email: true, name: true }
   })
   if (!staff) {
     throw new Error('Staff member not found')
@@ -424,6 +437,7 @@ export async function createBranch(formData: FormData) {
   // 2. Plan Check: Only ENTERPRISE shops can manage branches
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
+    select: { subscriptionPlan: true }
   })
   if (shop?.subscriptionPlan !== 'ENTERPRISE') {
     throw new Error('Branch management is only available on Enterprise plans')
@@ -437,7 +451,8 @@ export async function createBranch(formData: FormData) {
 
   // 3. Check duplicate branch name in shop
   const existingBranch = await prisma.branch.findFirst({
-    where: { shopId, name: parsed.name }
+    where: { shopId, name: parsed.name },
+    select: { id: true }
   })
   if (existingBranch) {
     throw new Error('A branch with this name already exists in your shop')
@@ -479,7 +494,9 @@ export async function deleteBranch(branchId: string) {
   // 2. Find and verify branch belongs to same shop
   const branch = await prisma.branch.findFirst({
     where: { id: branchId, shopId },
-    include: {
+    select: {
+      id: true,
+      name: true,
       _count: {
         select: { users: true, customers: true, loans: true }
       }
@@ -615,7 +632,8 @@ export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSE
   const { shopId, userId } = await getTenantContext()
 
   const loan = await prisma.loan.findFirst({
-    where: { id: loanId, shopId }
+    where: { id: loanId, shopId },
+    select: { id: true, customerId: true }
   })
   if (!loan) throw new Error('Loan not found')
 

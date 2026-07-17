@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import prisma from "@/lib/prisma"
+import { getCachedUser } from "@/lib/user"
 import SidebarNav from "@/components/sidebar-nav"
 import { Calendar } from "lucide-react"
 
@@ -9,21 +8,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
-
-  // Verify role and tenant association in DB, including shop
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! },
-    include: { shop: true }
-  })
+  const dbUser = await getCachedUser()
 
   if (!dbUser) {
-    redirect("/login?message=User not found in database")
+    redirect("/login")
   }
 
   if (dbUser.role === 'SUPER_ADMIN') {
@@ -40,7 +28,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen w-full bg-[#F8F9FB]">
       <SidebarNav 
-        userEmail={user.email!} 
+        userEmail={dbUser.email} 
         userRole={dbUser.role} 
         shopName={dbUser.shop?.name || 'Suvarna Shop'} 
         subscriptionPlan={dbUser.shop?.subscriptionPlan || 'STANDARD'} 

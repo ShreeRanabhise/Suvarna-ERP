@@ -1,8 +1,9 @@
 import { Users, Banknote, TrendingUp, AlertCircle, Scale, DollarSign, Wallet, ArrowUpRight } from "lucide-react"
-import { createClient } from "@/lib/supabase/server"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+
+import { getCachedUser } from "@/lib/user"
 
 // Utility helper to format currency in Indian style (Lakh/Crore)
 function formatINR(amount: number) {
@@ -15,13 +16,7 @@ function formatINR(amount: number) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
-  })
+  const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
   const shopId = dbUser.shopId
