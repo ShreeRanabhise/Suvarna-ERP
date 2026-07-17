@@ -57,7 +57,7 @@ export default async function ReportsPage() {
     const balances = calculateLoanBalances(loan as any)
     const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + item.weightGrams, 0)
 
-    if (loan.status === 'ACTIVE') {
+    if (loan.status !== 'CLOSED') {
       totalOutstandingPrincipal += balances.outstandingPrincipal
       totalGoldLockerGrams += goldWeight
 
@@ -67,9 +67,9 @@ export default async function ReportsPage() {
         goldInventoryByPurity[purity] = (goldInventoryByPurity[purity] || 0) + item.weightGrams
       })
 
-      // Check if loan is overdue (either status is OVERDUE or endDate is in the past)
+      // Check if loan is overdue (either status is OVERDUE, AUCTION or endDate is in the past)
       const isPastDueDate = loan.endDate ? new Date(loan.endDate) < new Date() : false
-      if (loan.status === 'OVERDUE' || isPastDueDate) {
+      if (loan.status === 'OVERDUE' || loan.status === 'AUCTION' || isPastDueDate) {
         overdueLoans.push({
           ...loan,
           outstandingPrincipal: balances.outstandingPrincipal,
