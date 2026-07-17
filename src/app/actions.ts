@@ -26,13 +26,6 @@ const loanSchema = z.object({
   valuation: z.number().positive(),
 })
 
-const paymentSchema = z.object({
-  loanId: z.string().uuid(),
-  amountPaid: z.number().positive(),
-  principalPaid: z.number().min(0),
-  interestPaid: z.number().min(0),
-  paymentMode: z.enum(['CASH', 'UPI', 'BANK', 'CHEQUE']),
-})
 
 // Helper to get current tenant
 async function getTenantContext() {
