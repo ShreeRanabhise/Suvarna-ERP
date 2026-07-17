@@ -281,13 +281,13 @@ export default async function ReportsPage() {
                       {payment.loan.customer.firstName} {payment.loan.customer.lastName}
                     </td>
                     <td className="px-6 py-4 font-bold font-mono text-foreground">
-                      ₹{payment.amountPaid.toLocaleString('en-IN')}
+                      ₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4 text-success font-mono">
-                      ₹{payment.principalPaid.toLocaleString('en-IN')}
+                      ₹{Number(payment.principalPaid).toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4 text-orange-600 font-mono">
-                      ₹{payment.interestPaid.toLocaleString('en-IN')}
+                      ₹{Number(payment.interestPaid).toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4 text-xs font-medium uppercase">{payment.paymentMode}</td>
                   </tr>
