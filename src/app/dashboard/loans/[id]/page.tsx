@@ -51,6 +51,11 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
     await updateLoanStatus(loan.id, 'ACTIVE')
   }
 
+  const handleRepay = async (formData: FormData) => {
+    'use server'
+    await repayLoan(formData)
+  }
+
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
       {/* Back link */}
@@ -170,7 +175,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Record Repayment</h3>
               
-              <form action={repayLoan} className="space-y-4">
+              <form action={handleRepay} className="space-y-4">
                 <input type="hidden" name="loanId" value={loan.id} />
                 
                 <div className="grid grid-cols-2 gap-4">
