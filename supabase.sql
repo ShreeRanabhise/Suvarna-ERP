@@ -13,11 +13,11 @@ ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
 
 -- 2. Create helper functions to get current user's shop_id and role
 CREATE OR REPLACE FUNCTION get_user_shop_id() RETURNS text AS $$
-  SELECT shopId FROM "User" WHERE id = auth.uid()::text LIMIT 1;
+  SELECT shopId FROM "User" WHERE email = (auth.jwt()->>'email')::text LIMIT 1;
 $$ LANGUAGE sql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION get_user_role() RETURNS text AS $$
-  SELECT role FROM "User" WHERE id = auth.uid()::text LIMIT 1;
+  SELECT role FROM "User" WHERE email = (auth.jwt()->>'email')::text LIMIT 1;
 $$ LANGUAGE sql SECURITY DEFINER;
 
 -- 3. RLS Policies

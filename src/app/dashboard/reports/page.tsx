@@ -52,10 +52,10 @@ export default async function ReportsPage() {
   const overdueLoans: any[] = []
 
   loans.forEach(loan => {
-    totalDisbursed += loan.principalAmount
+    totalDisbursed += Number(loan.principalAmount)
     
     const balances = calculateLoanBalances(loan as any)
-    const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + item.weightGrams, 0)
+    const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + Number(item.weightGrams), 0)
 
     if (loan.status !== 'CLOSED') {
       totalOutstandingPrincipal += balances.outstandingPrincipal
@@ -64,7 +64,7 @@ export default async function ReportsPage() {
       // Map gold inventory by purity
       loan.pledgedItems.forEach(item => {
         const purity = item.purity.toUpperCase().trim()
-        goldInventoryByPurity[purity] = (goldInventoryByPurity[purity] || 0) + item.weightGrams
+        goldInventoryByPurity[purity] = (goldInventoryByPurity[purity] || 0) + Number(item.weightGrams)
       })
 
       // Check if loan is overdue (either status is OVERDUE, AUCTION or endDate is in the past)
@@ -85,9 +85,9 @@ export default async function ReportsPage() {
   let totalPrincipalCollected = 0
 
   payments.forEach(payment => {
-    totalCollected += payment.amountPaid
-    totalInterestCollected += payment.interestPaid
-    totalPrincipalCollected += payment.principalPaid
+    totalCollected += Number(payment.amountPaid)
+    totalInterestCollected += Number(payment.interestPaid)
+    totalPrincipalCollected += Number(payment.principalPaid)
   })
 
   // Prepare ledger data for Excel Export
@@ -95,9 +95,9 @@ export default async function ReportsPage() {
     'Payment Date': new Date(p.paymentDate).toLocaleDateString('en-IN'),
     'Loan Number': p.loan.loanNumber,
     'Customer Name': `${p.loan.customer.firstName} ${p.loan.customer.lastName}`,
-    'Total Paid (₹)': p.amountPaid,
-    'Interest Component (₹)': p.interestPaid,
-    'Principal Component (₹)': p.principalPaid,
+    'Total Paid (₹)': Number(p.amountPaid),
+    'Interest Component (₹)': Number(p.interestPaid),
+    'Principal Component (₹)': Number(p.principalPaid),
     'Payment Mode': p.paymentMode,
     'Reference ID': p.referenceId || 'N/A'
   }))

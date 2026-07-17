@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     where: { shopId, status: 'ACTIVE', isDeleted: false },
     _sum: { principalAmount: true }
   })
-  const outstandingBalance = outstandingAgg._sum.principalAmount || 0
+  const outstandingBalance = Number(outstandingAgg._sum.principalAmount || 0)
 
   // 4. Active Loans due/expired by the end of this month
   const now = new Date()
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
       weightGrams: true
     }
   })
-  const totalGoldReserved = goldReservedAgg._sum.weightGrams || 0
+  const totalGoldReserved = Number(goldReservedAgg._sum.weightGrams || 0)
 
   // 5. Query recent 5 payments
   const recentPayments = await prisma.payment.findMany({
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
         const dDate = new Date(d.startDate)
         return dDate.getMonth() === monthNumber && dDate.getFullYear() === year
       })
-      .reduce((sum, d) => sum + d.principalAmount, 0)
+      .reduce((sum, d) => sum + Number(d.principalAmount), 0)
 
     return { month: monthName, amount: totalAmount }
   })
@@ -233,7 +233,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-success">
-                        +₹{payment.amountPaid.toLocaleString('en-IN')}
+                        +₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                       </p>
                       <p className="text-xs text-muted-foreground font-mono">
                         {payment.paymentMode}

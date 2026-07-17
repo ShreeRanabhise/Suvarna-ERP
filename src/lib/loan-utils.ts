@@ -1,14 +1,14 @@
 export interface Payment {
   id: string
   loanId: string
-  amountPaid: number
-  principalPaid: number
-  interestPaid: number
-  paymentDate: Date
+  amountPaid: any
+  principalPaid: any
+  interestPaid: any
+  paymentDate: Date | string
   paymentMode: 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
   referenceId: string | null
-  createdAt: Date
-  updatedAt: Date
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export interface Loan {
@@ -17,20 +17,23 @@ export interface Loan {
   shopId: string
   branchId: string | null
   customerId: string
-  principalAmount: number
-  interestRate: number
-  ltvPercentage: number
+  principalAmount: any
+  interestRate: any
+  ltvPercentage: any
   status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED'
-  startDate: Date
-  endDate: Date | null
+  startDate: Date | string
+  endDate: Date | string | null
   isDeleted: boolean
-  createdAt: Date
-  updatedAt: Date
+  createdAt: Date | string
+  updatedAt: Date | string
   payments: Payment[]
 }
 
 export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date()) {
-  let outstandingPrincipal = loan.principalAmount
+  const principalAmount = Number(loan.principalAmount || 0)
+  const interestRate = Number(loan.interestRate || 0)
+
+  let outstandingPrincipal = principalAmount
   let lastDate = new Date(loan.startDate)
   let interestAccruedTotal = 0
   let interestPaidTotal = 0
@@ -43,23 +46,25 @@ export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date())
 
   for (const payment of sortedPayments) {
     const paymentDate = new Date(payment.paymentDate)
+    const paymentInterestPaid = Number(payment.interestPaid || 0)
+    const paymentPrincipalPaid = Number(payment.principalPaid || 0)
     
     // Calculate interest accrued from the last date to this payment date
     const days = Math.max(0, Math.floor((paymentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
-    const accrued = outstandingPrincipal * (loan.interestRate / 100) * (days / 30)
+    const accrued = outstandingPrincipal * (interestRate / 100) * (days / 30)
     
     interestAccruedTotal += accrued
-    interestPaidTotal += payment.interestPaid
-    principalPaidTotal += payment.principalPaid
+    interestPaidTotal += paymentInterestPaid
+    principalPaidTotal += paymentPrincipalPaid
     
     // Deduct principal paid
-    outstandingPrincipal -= payment.principalPaid
+    outstandingPrincipal -= paymentPrincipalPaid
     lastDate = paymentDate
   }
 
   // Calculate interest accrued from the last transaction date to the targetDate
   const days = Math.max(0, Math.floor((targetDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
-  const accruedSinceLast = outstandingPrincipal * (loan.interestRate / 100) * (days / 30)
+  const accruedSinceLast = outstandingPrincipal * (interestRate / 100) * (days / 30)
   
   interestAccruedTotal += accruedSinceLast
 
@@ -75,3 +80,4 @@ export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date())
     daysSinceLast: days,
   }
 }
+

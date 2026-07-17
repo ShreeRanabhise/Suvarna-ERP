@@ -47,6 +47,9 @@ model User {
   shop      Shop?    @relation(fields: [shopId], references: [id])
   branch    Branch?  @relation(fields: [branchId], references: [id])
   auditLogs AuditLog[]
+
+  @@index([shopId])
+  @@index([branchId])
 }
 
 model Shop {
@@ -73,10 +76,12 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
   users     User[]
   customers Customer[]
   loans     Loan[]
+
+  @@index([shopId])
 }
 
 model Customer {
@@ -95,9 +100,12 @@ model Customer {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
   branch     Branch?  @relation(fields: [branchId], references: [id])
   loans      Loan[]
+
+  @@index([shopId])
+  @@index([branchId])
 }
 
 model Loan {
@@ -106,9 +114,9 @@ model Loan {
   shopId         String
   branchId       String?
   customerId     String
-  principalAmount Float
-  interestRate   Float      // Monthly interest rate percentage
-  ltvPercentage  Float
+  principalAmount Decimal    @db.Decimal(12, 2)
+  interestRate   Decimal    @db.Decimal(5, 2)      // Monthly interest rate percentage
+  ltvPercentage  Decimal    @db.Decimal(5, 2)
   status         LoanStatus @default(ACTIVE)
   startDate      DateTime   @default(now())
   endDate        DateTime?  // Expected or actual closure date
@@ -116,39 +124,47 @@ model Loan {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Restrict)
   branch         Branch?       @relation(fields: [branchId], references: [id])
-  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   pledgedItems   PledgedItem[]
   payments       Payment[]
+
+  @@index([shopId])
+  @@index([branchId])
+  @@index([customerId])
 }
 
 model PledgedItem {
   id          String   @id @default(uuid())
   loanId      String
   name        String   // e.g. Gold Chain
-  weightGrams Float
+  weightGrams Decimal  @db.Decimal(10, 3)
   purity      String   // e.g. 22K
-  valuation   Float
+  valuation   Decimal  @db.Decimal(12, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  loan        Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  loan        Loan     @relation(fields: [loanId], references: [id], onDelete: Restrict)
+
+  @@index([loanId])
 }
 
 model Payment {
   id            String      @id @default(uuid())
   loanId        String
-  amountPaid    Float
-  principalPaid Float       @default(0)
-  interestPaid  Float       @default(0)
+  amountPaid    Decimal     @db.Decimal(12, 2)
+  principalPaid Decimal     @db.Decimal(12, 2) @default(0)
+  interestPaid  Decimal     @db.Decimal(12, 2) @default(0)
   paymentDate   DateTime    @default(now())
   paymentMode   PaymentMode @default(CASH)
   referenceId   String?     // For UPI/Bank transfers
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Restrict)
+
+  @@index([loanId])
 }
 
 model NotificationLog {
@@ -161,6 +177,8 @@ model NotificationLog {
   createdAt DateTime @default(now())
 
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
 }
 
 model AuditLog {
@@ -175,4 +193,7 @@ model AuditLog {
 
   shop      Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([userId])
 }

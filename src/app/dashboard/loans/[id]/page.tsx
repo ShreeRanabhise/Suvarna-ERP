@@ -148,7 +148,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Gold Weight</span>
-                <span className="font-semibold text-sm font-mono">{pledge?.weightGrams || 0} grams</span>
+                <span className="font-semibold text-sm font-mono">{Number(pledge?.weightGrams || 0)} grams</span>
               </div>
             </div>
 
@@ -158,13 +158,13 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
               <div>
                 <span className="text-xs text-muted-foreground block">Market Valuation</span>
                 <span className="font-bold text-sm text-foreground font-mono">
-                  ₹{pledge?.valuation.toLocaleString('en-IN') || 0}
+                  ₹{Number(pledge?.valuation || 0).toLocaleString('en-IN')}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Allowed LTV Ratio</span>
                 <span className="font-semibold text-sm text-foreground font-mono">
-                  {loan.ltvPercentage}% (Max eligible: ₹{Math.round(pledge?.valuation * loan.ltvPercentage / 100).toLocaleString('en-IN')})
+                  {Number(loan.ltvPercentage)}% (Max eligible: ₹{Math.round(Number(pledge?.valuation || 0) * Number(loan.ltvPercentage) / 100).toLocaleString('en-IN')})
                 </span>
               </div>
             </div>
@@ -266,13 +266,13 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
                           {new Date(payment.paymentDate).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-6 py-4 font-semibold font-mono text-foreground">
-                          ₹{payment.amountPaid.toLocaleString('en-IN')}
+                          ₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                         </td>
                         <td className="px-6 py-4 text-orange-600 font-mono">
-                          ₹{payment.interestPaid.toLocaleString('en-IN')}
+                          ₹{Number(payment.interestPaid).toLocaleString('en-IN')}
                         </td>
                         <td className="px-6 py-4 text-success font-mono">
-                          ₹{payment.principalPaid.toLocaleString('en-IN')}
+                          ₹{Number(payment.principalPaid).toLocaleString('en-IN')}
                         </td>
                         <td className="px-6 py-4 text-xs font-medium">
                           {payment.paymentMode} {payment.referenceId ? `(${payment.referenceId})` : ''}
@@ -294,7 +294,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Original Principal</span>
               <span className="text-xl font-bold font-mono text-foreground">
-                ₹{loan.principalAmount.toLocaleString('en-IN')}
+                ₹{Number(loan.principalAmount).toLocaleString('en-IN')}
               </span>
             </div>
 
@@ -303,7 +303,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Outstanding Principal</span>
               <span className="text-xl font-bold font-mono text-primary">
-                ₹{balances.outstandingPrincipal.toLocaleString('en-IN')}
+                ₹{Number(balances.outstandingPrincipal).toLocaleString('en-IN')}
               </span>
             </div>
 
@@ -311,7 +311,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
               <span className="text-xs text-muted-foreground flex justify-between items-center">
                 <span>Accrued Interest Due</span>
                 <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono">
-                  {loan.interestRate}% monthly
+                  {Number(loan.interestRate)}% monthly
                 </span>
               </span>
               <span className="text-xl font-bold font-mono text-orange-600">

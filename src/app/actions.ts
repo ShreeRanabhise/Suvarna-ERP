@@ -534,26 +534,30 @@ export async function repayLoan(formData: FormData) {
     throw new Error('Invalid payment details')
   }
 
-  // 1. Fetch loan with payments
-  const loan = await prisma.loan.findFirst({
-    where: { id: loanId, shopId },
-    include: { payments: true }
-  })
-
-  if (!loan) throw new Error('Loan not found')
-  if (loan.status === 'CLOSED') throw new Error('Loan is already closed')
-
-  // 2. Calculate current balances
-  const balances = calculateLoanBalances(loan as any)
-  
-  // Allocate amountPaid
-  const interestPaid = Math.min(amountPaid, balances.interestDue)
-  const rawPrincipalPaid = Math.max(0, amountPaid - interestPaid)
-  const principalPaid = Math.min(rawPrincipalPaid, balances.outstandingPrincipal)
-  const actualAmountPaid = interestPaid + principalPaid
-
-  // 3. Create payment and update loan in transaction
+  // Execute payment recording and loan updates inside a locked interactive transaction
   const result = await prisma.$transaction(async (tx) => {
+    // 1. Perform a SELECT FOR UPDATE to pessimistically lock the loan row
+    await tx.$queryRaw`SELECT id FROM "Loan" WHERE id = ${loanId} FOR UPDATE`
+
+    // 2. Fetch the locked loan with all payments inside the transaction scope
+    const loan = await tx.loan.findFirst({
+      where: { id: loanId, shopId },
+      include: { payments: true }
+    })
+
+    if (!loan) throw new Error('Loan not found or unauthorized')
+    if (loan.status === 'CLOSED') throw new Error('Loan is already closed')
+
+    // 3. Calculate current balances dynamically
+    const balances = calculateLoanBalances(loan as any)
+    
+    // Allocate amountPaid to interest first, then principal
+    const interestPaid = Math.min(amountPaid, balances.interestDue)
+    const rawPrincipalPaid = Math.max(0, amountPaid - interestPaid)
+    const principalPaid = Math.min(rawPrincipalPaid, balances.outstandingPrincipal)
+    const actualAmountPaid = interestPaid + principalPaid
+
+    // 4. Record the repayment transaction
     const newPayment = await tx.payment.create({
       data: {
         loanId,
@@ -566,8 +570,9 @@ export async function repayLoan(formData: FormData) {
       }
     })
 
+    // 5. Update loan status and close it if fully settled
     const finalOutstandingPrincipal = balances.outstandingPrincipal - principalPaid
-    const isFullyPaid = finalOutstandingPrincipal <= 0.01 // handle minor floating point differences
+    const isFullyPaid = finalOutstandingPrincipal <= 0.01 // handle minor differences
 
     await tx.loan.update({
       where: { id: loanId },
@@ -577,6 +582,7 @@ export async function repayLoan(formData: FormData) {
       }
     })
 
+    // 6. Write to Audit Trail
     await tx.auditLog.create({
       data: {
         shopId,
@@ -594,12 +600,12 @@ export async function repayLoan(formData: FormData) {
       }
     })
 
-    return { paymentId: newPayment.id, isFullyPaid }
+    return { paymentId: newPayment.id, isFullyPaid, customerId: loan.customerId }
   })
 
   revalidatePath('/dashboard/loans')
   revalidatePath(`/dashboard/loans/${loanId}`)
-  revalidatePath(`/dashboard/customers/${loan.customerId}`)
+  revalidatePath(`/dashboard/customers/${result.customerId}`)
   revalidatePath('/dashboard/reports')
 
   return { success: true, ...result }

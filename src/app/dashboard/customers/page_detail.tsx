@@ -42,7 +42,7 @@ export default async function CustomerDetailPage(props: { params: Promise<{ id: 
   
   const processedLoans = customer.loans.map(loan => {
     const balances = calculateLoanBalances(loan as any)
-    const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + item.weightGrams, 0)
+    const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + Number(item.weightGrams), 0)
     
     if (loan.status === 'ACTIVE') {
       totalActivePrincipal += balances.outstandingPrincipal
@@ -202,9 +202,9 @@ export default async function CustomerDetailPage(props: { params: Promise<{ id: 
                   <tr key={loan.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="px-6 py-4 font-mono font-medium">{loan.loanNumber}</td>
                     <td className="px-6 py-4">
-                      {loan.pledgedItems[0]?.name || 'N/A'} ({loan.pledgedItems[0]?.weightGrams}g, {loan.pledgedItems[0]?.purity})
+                      {loan.pledgedItems[0]?.name || 'N/A'} ({Number(loan.pledgedItems[0]?.weightGrams || 0)}g, {loan.pledgedItems[0]?.purity})
                     </td>
-                    <td className="px-6 py-4 font-mono">₹{loan.principalAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 font-mono">₹{Number(loan.principalAmount).toLocaleString('en-IN')}</td>
                     <td className="px-6 py-4 font-mono">
                       {loan.status === 'ACTIVE' ? `₹${Math.round(loan.totalDue).toLocaleString('en-IN')}` : '-'}
                     </td>

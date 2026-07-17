@@ -82,7 +82,7 @@ export default async function LoansPage({
                     <td className="px-6 py-4">
                       {loan.customer.firstName} {loan.customer.lastName}
                     </td>
-                    <td className="px-6 py-4 font-mono">₹{loan.principalAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 font-mono">₹{Number(loan.principalAmount).toLocaleString('en-IN')}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
                         loan.status === 'ACTIVE'
