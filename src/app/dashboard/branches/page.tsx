@@ -1,11 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AddBranchDialog from "@/components/add-branch-dialog"
 import DeleteBranchButton from "@/components/delete-branch-button"
 import { Building, Users, Banknote, Award } from "lucide-react"
-
-const prisma = new PrismaClient()
 
 export default async function BranchesPage() {
   const supabase = await createClient()

@@ -1,11 +1,9 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-
-const prisma = new PrismaClient()
 
 const shopSchema = z.object({
   name: z.string().min(1, 'Shop name is required'),
@@ -68,7 +66,7 @@ export async function createShop(formData: FormData) {
   })
 
   revalidatePath('/super-admin')
-  return { success: true, shop }
+  return { success: true, shopId: shop.id }
 }
 
 export async function toggleShopStatus(shopId: string, isSuspended: boolean) {

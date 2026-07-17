@@ -1,9 +1,7 @@
 import { Users, Banknote, TrendingUp, AlertCircle, Scale } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-
-const prisma = new PrismaClient()
 
 // Utility helper to format currency in Indian style (Lakh/Crore)
 function formatINR(amount: number) {

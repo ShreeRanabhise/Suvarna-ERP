@@ -1,11 +1,10 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-
-const prisma = new PrismaClient()
+import { calculateLoanBalances } from '@/lib/loan-utils'
 
 // Validation Schemas
 const customerSchema = z.object({
@@ -89,7 +88,7 @@ export async function createCustomer(formData: FormData) {
   })
 
   revalidatePath('/dashboard/customers')
-  return { success: true, customer }
+  return { success: true, customerId: customer.id }
 }
 
 export async function createLoan(formData: FormData) {
@@ -152,7 +151,7 @@ export async function createLoan(formData: FormData) {
   })
 
   revalidatePath('/dashboard/loans')
-  return { success: true, loan }
+  return { success: true, loanId: loan.id }
 }
 
 export async function recordPayment(formData: FormData) {
@@ -199,7 +198,7 @@ export async function recordPayment(formData: FormData) {
   })
 
   revalidatePath('/dashboard/loans')
-  return { success: true, payment }
+  return { success: true, paymentId: payment.id }
 }
 
 const onboardingSchema = z.object({
@@ -305,7 +304,7 @@ export async function onboardCustomerWithLoan(formData: FormData) {
   revalidatePath('/dashboard/customers')
   revalidatePath('/dashboard/loans')
 
-  return { success: true, ...result }
+  return { success: true, customerId: result.customer.id, loanId: result.loan.id }
 }
 
 const staffSchema = z.object({
@@ -370,7 +369,7 @@ export async function createStaffMember(formData: FormData) {
   })
 
   revalidatePath('/dashboard/staff')
-  return { success: true, staff }
+  return { success: true, staffId: staff.id }
 }
 
 export async function deleteStaffMember(staffId: string) {
@@ -466,7 +465,7 @@ export async function createBranch(formData: FormData) {
 
   revalidatePath('/dashboard/branches')
   revalidatePath('/dashboard/staff')
-  return { success: true, branch }
+  return { success: true, branchId: branch.id }
 }
 
 export async function deleteBranch(branchId: string) {
@@ -522,4 +521,122 @@ export async function deleteBranch(branchId: string) {
   revalidatePath('/dashboard/staff')
   return { success: true }
 }
+
+export async function repayLoan(formData: FormData) {
+  const { shopId, userId } = await getTenantContext()
+  
+  const loanId = formData.get('loanId') as string
+  const amountPaid = Number(formData.get('amountPaid'))
+  const paymentMode = formData.get('paymentMode') as 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
+  const referenceId = formData.get('referenceId') as string | null
+
+  if (!loanId || isNaN(amountPaid) || amountPaid <= 0) {
+    throw new Error('Invalid payment details')
+  }
+
+  // 1. Fetch loan with payments
+  const loan = await prisma.loan.findFirst({
+    where: { id: loanId, shopId },
+    include: { payments: true }
+  })
+
+  if (!loan) throw new Error('Loan not found')
+  if (loan.status === 'CLOSED') throw new Error('Loan is already closed')
+
+  // 2. Calculate current balances
+  const balances = calculateLoanBalances(loan as any)
+  
+  // Allocate amountPaid
+  const interestPaid = Math.min(amountPaid, balances.interestDue)
+  const rawPrincipalPaid = Math.max(0, amountPaid - interestPaid)
+  const principalPaid = Math.min(rawPrincipalPaid, balances.outstandingPrincipal)
+  const actualAmountPaid = interestPaid + principalPaid
+
+  // 3. Create payment and update loan in transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const newPayment = await tx.payment.create({
+      data: {
+        loanId,
+        amountPaid: actualAmountPaid,
+        principalPaid,
+        interestPaid,
+        paymentMode,
+        referenceId: referenceId || null,
+        paymentDate: new Date()
+      }
+    })
+
+    const finalOutstandingPrincipal = balances.outstandingPrincipal - principalPaid
+    const isFullyPaid = finalOutstandingPrincipal <= 0.01 // handle minor floating point differences
+
+    await tx.loan.update({
+      where: { id: loanId },
+      data: {
+        status: isFullyPaid ? 'CLOSED' : loan.status,
+        endDate: isFullyPaid ? new Date() : loan.endDate
+      }
+    })
+
+    await tx.auditLog.create({
+      data: {
+        shopId,
+        userId,
+        action: 'RECORD_REPAYMENT',
+        entity: 'PAYMENT',
+        entityId: newPayment.id,
+        details: JSON.stringify({
+          loanId,
+          amountPaid: actualAmountPaid,
+          principalPaid,
+          interestPaid,
+          isFullyPaid
+        })
+      }
+    })
+
+    return { paymentId: newPayment.id, isFullyPaid }
+  })
+
+  revalidatePath('/dashboard/loans')
+  revalidatePath(`/dashboard/loans/${loanId}`)
+  revalidatePath(`/dashboard/customers/${loan.customerId}`)
+  revalidatePath('/dashboard/reports')
+
+  return { success: true, ...result }
+}
+
+export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED') {
+  const { shopId, userId } = await getTenantContext()
+
+  const loan = await prisma.loan.findFirst({
+    where: { id: loanId, shopId }
+  })
+  if (!loan) throw new Error('Loan not found')
+
+  await prisma.$transaction(async (tx) => {
+    await tx.loan.update({
+      where: { id: loanId },
+      data: { status }
+    })
+
+    await tx.auditLog.create({
+      data: {
+        shopId,
+        userId,
+        action: 'UPDATE_LOAN_STATUS',
+        entity: 'LOAN',
+        entityId: loanId,
+        details: JSON.stringify({ status })
+      }
+    })
+  })
+
+  revalidatePath('/dashboard/loans')
+  revalidatePath(`/dashboard/loans/${loanId}`)
+  revalidatePath(`/dashboard/customers/${loan.customerId}`)
+  revalidatePath('/dashboard/reports')
+
+  return { success: true }
+}
+
 

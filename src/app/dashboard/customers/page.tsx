@@ -1,12 +1,15 @@
-import { Search } from "lucide-react"
+import Link from "next/link"
 import OnboardCustomerDialog from "@/components/onboard-customer-dialog"
+import SearchInput from "@/components/search-input"
 import { createClient } from "@/lib/supabase/server"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
-const prisma = new PrismaClient()
-
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -16,10 +19,20 @@ export default async function CustomersPage() {
   })
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
+  const { query } = await searchParams
+
   const customers = await prisma.customer.findMany({
     where: {
       shopId: dbUser.shopId,
-      isDeleted: false
+      isDeleted: false,
+      OR: query
+        ? [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { phone: { contains: query, mode: 'insensitive' } },
+            { aadhaar: { contains: query, mode: 'insensitive' } },
+          ]
+        : undefined,
     },
     include: {
       loans: {
@@ -38,14 +51,7 @@ export default async function CustomersPage() {
 
       <div className="rounded-xl border bg-card text-card-foreground shadow">
         <div className="p-4 border-b flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search customers..."
-              className="w-full rounded-md border bg-background pl-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+          <SearchInput placeholder="Search customers by name, phone or Aadhaar..." />
         </div>
         <div className="p-0">
           <table className="w-full text-sm text-left">
@@ -72,7 +78,7 @@ export default async function CustomersPage() {
                       <td className="px-6 py-4 font-medium">
                         {customer.firstName} {customer.lastName}
                       </td>
-                      <td className="px-6 py-4">{customer.phone}</td>
+                      <td className="px-6 py-4 font-mono">{customer.phone}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
                           activeLoans > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
@@ -81,7 +87,12 @@ export default async function CustomersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-primary hover:underline text-xs font-medium">View Details</button>
+                        <Link 
+                          href={`/dashboard/customers/${customer.id}`} 
+                          className="text-primary hover:underline text-xs font-medium"
+                        >
+                          View Profile
+                        </Link>
                       </td>
                     </tr>
                   )

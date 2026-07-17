@@ -3,9 +3,7 @@ import Link from "next/link"
 import { Users, LayoutDashboard, FileText, Settings, LogOut, Banknote, UserCheck, Building } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { logout } from "@/app/login/actions"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import prisma from "@/lib/prisma"
 
 export default async function DashboardLayout({
   children,

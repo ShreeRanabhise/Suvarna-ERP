@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/lib/prisma'
 import { Plus, ToggleLeft, ToggleRight, DollarSign, Store, Activity, AlertTriangle } from 'lucide-react'
 import CreateShopDialog from './create-shop-dialog'
 import ShopRow from './shop-row'
-
-const prisma = new PrismaClient()
 
 export default async function SuperAdminDashboard() {
   const shops = await prisma.shop.findMany({

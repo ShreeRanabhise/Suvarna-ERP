@@ -3,6 +3,17 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('Cleaning up existing database records...')
+  await prisma.payment.deleteMany({})
+  await prisma.pledgedItem.deleteMany({})
+  await prisma.loan.deleteMany({})
+  await prisma.customer.deleteMany({})
+  await prisma.user.deleteMany({})
+  await prisma.branch.deleteMany({})
+  await prisma.shop.deleteMany({})
+
+  console.log('Seeding database...')
+
   // 1. Create Super Admin
   // Note: In a real app with Supabase Auth, you'd also create the user in auth.users
   // or sync them via triggers. For this seed, we just populate the public.User table.

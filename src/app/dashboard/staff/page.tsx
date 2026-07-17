@@ -1,11 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AddStaffDialog from "@/components/add-staff-dialog"
 import DeleteStaffButton from "@/components/delete-staff-button"
 import { Users, Building, ShieldAlert, Award } from "lucide-react"
-
-const prisma = new PrismaClient()
 
 export default async function StaffPage() {
   const supabase = await createClient()
