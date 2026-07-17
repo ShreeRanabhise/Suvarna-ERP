@@ -9,32 +9,46 @@ import { ArrowRight, Landmark } from "lucide-react"
 export default async function LoansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>
+  searchParams: Promise<{ query?: string; status?: string }>
 }) {
   const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
-  const { query } = await searchParams
+  const search = await searchParams
+  const rawQuery = search?.query
+  const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
+  
+  const rawStatus = search?.status
+  const statusFilter = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus
+  
+  const activeTab = statusFilter || 'ALL'
+
+  const whereClause: any = {
+    shopId: dbUser.shopId,
+    isDeleted: false,
+  }
+  
+  if (activeTab !== 'ALL') {
+    whereClause.status = activeTab
+  }
+
+  if (query) {
+    whereClause.OR = [
+      { loanNumber: { contains: query, mode: 'insensitive' } },
+      {
+        customer: {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { phone: { contains: query, mode: 'insensitive' } },
+          ]
+        }
+      }
+    ]
+  }
 
   const loans = await prisma.loan.findMany({
-    where: {
-      shopId: dbUser.shopId,
-      isDeleted: false,
-      OR: query
-        ? [
-            { loanNumber: { contains: query, mode: 'insensitive' } },
-            {
-              customer: {
-                OR: [
-                  { firstName: { contains: query, mode: 'insensitive' } },
-                  { lastName: { contains: query, mode: 'insensitive' } },
-                  { phone: { contains: query, mode: 'insensitive' } },
-                ]
-              }
-            }
-          ]
-        : undefined,
-    },
+    where: whereClause,
     include: {
       customer: true
     },
@@ -42,18 +56,45 @@ export default async function LoansPage({
   })
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-heading tracking-tight">Active Contracts</h2>
-          <p className="text-xs text-muted-foreground mt-1">Monitor, disburse, and manage active gold loan agreements</p>
+          <h2 className="text-3xl font-heading tracking-tight text-slate-900">Loan Contracts</h2>
+          <p className="text-sm text-muted-foreground mt-1">Monitor, disburse, and manage all gold loan agreements</p>
         </div>
         <CreateLoanDialog />
       </div>
 
-      <div className="luxury-card rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-slate-200">
+        <Link 
+          href={`/dashboard/loans?status=ALL${query ? `&query=${query}` : ''}`}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'ALL' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          All Contracts
+        </Link>
+        <Link 
+          href={`/dashboard/loans?status=ACTIVE${query ? `&query=${query}` : ''}`}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'ACTIVE' ? 'border-success text-success' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          Active
+        </Link>
+        <Link 
+          href={`/dashboard/loans?status=OVERDUE${query ? `&query=${query}` : ''}`}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'OVERDUE' ? 'border-destructive text-destructive' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          Overdue
+        </Link>
+        <Link 
+          href={`/dashboard/loans?status=CLOSED${query ? `&query=${query}` : ''}`}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'CLOSED' ? 'border-slate-800 text-slate-800' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          Closed
+        </Link>
+      </div>
+
+      <div className="luxury-card rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 bg-white">
         {/* Table Filters & Search */}
-        <div className="p-5 border-b flex items-center justify-between gap-4 bg-slate-50/50">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
           <div className="w-full max-w-md">
             <SearchInput placeholder="Search by Loan ID, customer name or phone..." />
           </div>

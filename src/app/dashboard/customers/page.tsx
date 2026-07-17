@@ -14,21 +14,26 @@ export default async function CustomersPage({
   const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
-  const { query } = await searchParams
+  const search = await searchParams
+  const rawQuery = search?.query
+  const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
+
+  const whereClause: any = {
+    shopId: dbUser.shopId,
+    isDeleted: false,
+  }
+
+  if (query) {
+    whereClause.OR = [
+      { firstName: { contains: query, mode: 'insensitive' } },
+      { lastName: { contains: query, mode: 'insensitive' } },
+      { phone: { contains: query, mode: 'insensitive' } },
+      { aadhaar: { contains: query, mode: 'insensitive' } },
+    ]
+  }
 
   const customers = await prisma.customer.findMany({
-    where: {
-      shopId: dbUser.shopId,
-      isDeleted: false,
-      OR: query
-        ? [
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
-            { phone: { contains: query, mode: 'insensitive' } },
-            { aadhaar: { contains: query, mode: 'insensitive' } },
-          ]
-        : undefined,
-    },
+    where: whereClause,
     include: {
       loans: {
         where: { isDeleted: false }
