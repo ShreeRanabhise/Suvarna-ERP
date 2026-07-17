@@ -35,10 +35,21 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
   const balances = calculateLoanBalances(loan as any)
   const pledge = loan.pledgedItems[0]
 
-  // Pre-bind server actions with parameters
-  const setOverdue = updateLoanStatus.bind(null, loan.id, 'OVERDUE')
-  const setAuction = updateLoanStatus.bind(null, loan.id, 'AUCTION')
-  const setActive = updateLoanStatus.bind(null, loan.id, 'ACTIVE')
+  // Server actions wrapper to satisfy form action type constraints (Promise<void>)
+  const handleSetOverdue = async () => {
+    'use server'
+    await updateLoanStatus(loan.id, 'OVERDUE')
+  }
+
+  const handleSetAuction = async () => {
+    'use server'
+    await updateLoanStatus(loan.id, 'AUCTION')
+  }
+
+  const handleSetActive = async () => {
+    'use server'
+    await updateLoanStatus(loan.id, 'ACTIVE')
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
@@ -90,12 +101,12 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
           
           {loan.status === 'ACTIVE' && (
             <div className="flex gap-2">
-              <form action={setOverdue}>
+              <form action={handleSetOverdue}>
                 <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-destructive hover:bg-destructive/5 font-medium">
                   Mark Overdue
                 </button>
               </form>
-              <form action={setAuction}>
+              <form action={handleSetAuction}>
                 <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-orange-600 hover:bg-orange-50 font-medium">
                   Send to Auction
                 </button>
@@ -104,7 +115,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
           )}
 
           {loan.status !== 'ACTIVE' && loan.status !== 'CLOSED' && (
-            <form action={setActive}>
+            <form action={handleSetActive}>
               <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-primary hover:bg-primary/5 font-medium">
                 Revert to Active
               </button>
