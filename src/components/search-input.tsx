@@ -24,18 +24,20 @@ export default function SearchInput({ placeholder = 'Search...' }: { placeholder
   }
 
   return (
-    <div className="relative flex-1 max-w-sm">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="relative w-full max-w-md">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <Search className="h-4 w-4" />
+      </div>
       <input
         type="search"
         placeholder={placeholder}
         defaultValue={searchParams.get('query')?.toString() || ''}
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full rounded-md border bg-background pl-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+        className="w-full rounded-xl border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-white pl-9 pr-12 py-2 text-sm text-slate-800 outline-none transition"
       />
       {isPending && (
-        <span className="absolute right-2.5 top-3 text-xs text-muted-foreground animate-pulse">
-          Searching...
+        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase tracking-wider text-primary animate-pulse">
+          Pending
         </span>
       )}
     </div>

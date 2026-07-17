@@ -4,6 +4,7 @@ import SearchInput from "@/components/search-input"
 import { createClient } from "@/lib/supabase/server"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { ArrowRight, Landmark } from "lucide-react"
 
 export default async function LoansPage({
   searchParams,
@@ -47,68 +48,85 @@ export default async function LoansPage({
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-heading tracking-tight">Loans</h2>
+        <div>
+          <h2 className="text-3xl font-heading tracking-tight">Active Contracts</h2>
+          <p className="text-xs text-muted-foreground mt-1">Monitor, disburse, and manage active gold loan agreements</p>
+        </div>
         <CreateLoanDialog />
       </div>
 
-      <div className="rounded-xl border bg-card text-card-foreground shadow">
-        <div className="p-4 border-b flex items-center gap-4">
-          <SearchInput placeholder="Search loan ID, customer name or phone..." />
+      <div className="luxury-card rounded-2xl overflow-hidden">
+        {/* Table Filters & Search */}
+        <div className="p-5 border-b flex items-center justify-between gap-4 bg-slate-50/50">
+          <div className="w-full max-w-md">
+            <SearchInput placeholder="Search by Loan ID, customer name or phone..." />
+          </div>
         </div>
-        <div className="p-0">
+
+        {/* Table View */}
+        <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Loan ID</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Customer</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Principal</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground text-right">Actions</th>
+                <th className="px-6 py-4">Loan Reference</th>
+                <th className="px-6 py-4">Customer Name</th>
+                <th className="px-6 py-4">Principal Amount</th>
+                <th className="px-6 py-4">Contract Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {loans.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No active loans found. Click "Create Loan" to create your first gold loan.
+                  <td colSpan={5} className="text-center py-12 text-slate-400 italic">
+                    No active gold loan contracts found.
                   </td>
                 </tr>
               ) : (
                 loans.map((loan) => (
-                  <tr key={loan.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-6 py-4 font-mono font-medium">{loan.loanNumber}</td>
-                    <td className="px-6 py-4">
-                      {loan.customer.firstName} {loan.customer.lastName}
+                  <tr key={loan.id} className="hover:bg-slate-50/40 transition-colors">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">
+                      {loan.loanNumber}
                     </td>
-                    <td className="px-6 py-4 font-mono">₹{Number(loan.principalAmount).toLocaleString('en-IN')}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                      <span className="font-semibold text-slate-800 text-sm">
+                        {loan.customer.firstName} {loan.customer.lastName}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-700 font-bold">
+                      ₹{Number(loan.principalAmount).toLocaleString('en-IN')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                         loan.status === 'ACTIVE'
-                          ? 'bg-success/10 text-success border-success/20'
+                          ? 'bg-success/10 text-success border border-success/20'
                           : loan.status === 'CLOSED'
-                          ? 'bg-muted text-muted-foreground border-muted-foreground/10'
-                          : 'bg-destructive/10 text-destructive border-destructive/20'
+                          ? 'bg-slate-100 text-slate-500 border border-slate-200'
+                          : 'bg-destructive/10 text-destructive border border-destructive/20'
                       }`}>
                         {loan.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {loan.status === 'ACTIVE' ? (
+                      <div className="flex justify-end gap-2">
+                        {loan.status === 'ACTIVE' && (
+                          <Link 
+                            href={`/dashboard/loans/${loan.id}`}
+                            className="inline-flex items-center bg-primary text-white hover:gold-gradient-hover px-3 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition"
+                          >
+                            <span>Repay</span>
+                          </Link>
+                        )}
                         <Link 
                           href={`/dashboard/loans/${loan.id}`}
-                          className="text-primary hover:underline text-xs font-semibold mr-4"
+                          className="inline-flex items-center gap-1 border hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition"
                         >
-                          Receive Payment
+                          <span>Details</span>
+                          <ArrowRight className="h-3 w-3 text-slate-400" />
                         </Link>
-                      ) : null}
-                      <Link 
-                        href={`/dashboard/loans/${loan.id}`}
-                        className="text-muted-foreground hover:underline text-xs font-semibold"
-                      >
-                        View Details
-                      </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

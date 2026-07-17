@@ -23,7 +23,7 @@ export default function DeleteStaffButton({ staffId, staffName }: { staffId: str
     <button
       onClick={handleDelete}
       disabled={isPending}
-      className="text-destructive hover:opacity-80 disabled:opacity-50 transition p-1"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-destructive hover:bg-destructive/5 hover:border-destructive/20 disabled:opacity-50 transition"
       title="Remove Staff Member"
     >
       <Trash2 className="h-4 w-4" />

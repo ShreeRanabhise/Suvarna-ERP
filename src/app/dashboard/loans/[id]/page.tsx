@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, Landmark, Calendar, Percent, Scale, TrendingDown, DollarSign, Wallet, ShieldAlert, Award, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Landmark, Calendar, Percent, Scale, TrendingDown, DollarSign, Wallet, ShieldAlert, Award, FileText, CheckCircle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
@@ -62,28 +62,30 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
       <div>
         <Link 
           href="/dashboard/loans"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-slate-900 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Loans</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Back to Active Contracts</span>
         </Link>
       </div>
 
       {/* Header Card */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card border rounded-2xl p-6 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 luxury-card rounded-2xl p-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-muted text-muted-foreground">Gold Loan</span>
-            <span className="text-sm font-mono font-medium text-muted-foreground">{loan.id}</span>
+            <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+              Gold Collateral Contract
+            </span>
+            <span className="text-[10px] font-mono font-medium text-slate-400">UUID: {loan.id.slice(0, 8)}</span>
           </div>
-          <h2 className="text-2xl font-bold font-heading text-foreground mt-1">
-            Loan ID: {loan.loanNumber}
+          <h2 className="text-xl md:text-2xl font-bold font-heading text-slate-900 mt-2">
+            Contract ID: {loan.loanNumber}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pledged by:{' '}
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Pledgor Client:{' '}
             <Link 
               href={`/dashboard/customers/${loan.customerId}`}
-              className="text-primary hover:underline font-semibold"
+              className="text-primary hover:underline font-bold"
             >
               {loan.customer.firstName} {loan.customer.lastName}
             </Link>
@@ -92,27 +94,27 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
         
         {/* Status Badge & manual action */}
         <div className="flex flex-col items-end gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold ${
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
             loan.status === 'ACTIVE'
-              ? 'bg-success/10 text-success border-success/20'
+              ? 'bg-success/10 text-success border border-success/20'
               : loan.status === 'CLOSED'
-              ? 'bg-muted text-muted-foreground border-muted-foreground/15'
-              : 'bg-destructive/10 text-destructive border-destructive/20'
+              ? 'bg-slate-100 text-slate-500 border border-slate-200'
+              : 'bg-destructive/10 text-destructive border border-destructive/20'
           }`}>
-            {loan.status === 'ACTIVE' && <Landmark className="h-4 w-4" />}
-            {loan.status === 'CLOSED' && <CheckCircle className="h-4 w-4" />}
+            {loan.status === 'ACTIVE' && <Landmark className="h-3.5 w-3.5" />}
+            {loan.status === 'CLOSED' && <CheckCircle className="h-3.5 w-3.5" />}
             {loan.status}
           </span>
           
           {loan.status === 'ACTIVE' && (
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 mt-1">
               <form action={handleSetOverdue}>
-                <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-destructive hover:bg-destructive/5 font-medium">
+                <button type="submit" className="text-[10px] border border-slate-200 hover:border-destructive/20 bg-white px-2.5 py-1.5 rounded-xl text-destructive hover:bg-destructive/5 font-bold transition">
                   Mark Overdue
                 </button>
               </form>
               <form action={handleSetAuction}>
-                <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-orange-600 hover:bg-orange-50 font-medium">
+                <button type="submit" className="text-[10px] border border-slate-200 hover:border-orange-500/20 bg-white px-2.5 py-1.5 rounded-xl text-orange-600 hover:bg-orange-50 font-bold transition">
                   Send to Auction
                 </button>
               </form>
@@ -120,8 +122,8 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
           )}
 
           {loan.status !== 'ACTIVE' && loan.status !== 'CLOSED' && (
-            <form action={handleSetActive}>
-              <button type="submit" className="text-xs border px-2.5 py-1 rounded-md text-primary hover:bg-primary/5 font-medium">
+            <form action={handleSetActive} className="mt-1">
+              <button type="submit" className="text-[10px] border border-primary/20 bg-white px-3 py-1.5 rounded-xl text-primary hover:bg-primary/5 font-bold transition">
                 Revert to Active
               </button>
             </form>
@@ -134,36 +136,36 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
         {/* Left Area (Col 1 & 2): Pledge Details & Repayment Form / Ledger */}
         <div className="md:col-span-2 flex flex-col gap-6">
           {/* Pledge Item details */}
-          <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Pledge Asset details</h3>
+          <div className="luxury-card rounded-2xl p-6 flex flex-col gap-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Collateral Valuation Parameters</h3>
             
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <span className="text-xs text-muted-foreground block">Item Description</span>
-                <span className="font-semibold text-sm">{pledge?.name || 'N/A'}</span>
+                <span className="text-[10px] uppercase text-muted-foreground block font-medium">Item Description</span>
+                <span className="font-bold text-slate-800 text-sm">{pledge?.name || 'N/A'}</span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Purity</span>
-                <span className="font-semibold text-sm">{pledge?.purity || 'N/A'}</span>
+                <span className="text-[10px] uppercase text-muted-foreground block font-medium">Gold Purity</span>
+                <span className="font-bold text-slate-800 text-sm">{pledge?.purity || 'N/A'}</span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Gold Weight</span>
-                <span className="font-semibold text-sm font-mono">{Number(pledge?.weightGrams || 0)} grams</span>
+                <span className="text-[10px] uppercase text-muted-foreground block font-medium">Gross Weight</span>
+                <span className="font-bold text-slate-800 text-sm font-mono">{Number(pledge?.weightGrams || 0).toFixed(2)} g</span>
               </div>
             </div>
 
-            <hr />
+            <hr className="border-slate-100" />
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-xs text-muted-foreground block">Market Valuation</span>
-                <span className="font-bold text-sm text-foreground font-mono">
+                <span className="text-[10px] uppercase text-muted-foreground block font-medium">Gold Appraisal Value</span>
+                <span className="font-extrabold text-base text-slate-900 font-mono">
                   ₹{Number(pledge?.valuation || 0).toLocaleString('en-IN')}
                 </span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Allowed LTV Ratio</span>
-                <span className="font-semibold text-sm text-foreground font-mono">
+                <span className="text-[10px] uppercase text-muted-foreground block font-medium">Allowed LTV Limit</span>
+                <span className="font-semibold text-xs text-slate-800 font-mono block mt-1">
                   {Number(loan.ltvPercentage)}% (Max eligible: ₹{Math.round(Number(pledge?.valuation || 0) * Number(loan.ltvPercentage) / 100).toLocaleString('en-IN')})
                 </span>
               </div>
@@ -172,15 +174,15 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
 
           {/* Repayment Form (if active) */}
           {loan.status === 'ACTIVE' ? (
-            <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Record Repayment</h3>
+            <div className="luxury-card rounded-2xl p-6 flex flex-col gap-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Submit Repayment Transaction</h3>
               
               <form action={handleRepay} className="space-y-4">
                 <input type="hidden" name="loanId" value={loan.id} />
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Repayment Amount (₹)</label>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Repayment Amount (₹)</label>
                     <input 
                       name="amountPaid"
                       type="number"
@@ -188,93 +190,93 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
                       min="1"
                       step="0.01"
                       placeholder="e.g. 5000"
-                      className="w-full px-3 py-2 border rounded-md bg-transparent font-mono text-sm font-bold"
+                      className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-xl bg-transparent font-mono text-sm font-bold text-slate-800 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Mode</label>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Payment Mode</label>
                     <select 
                       name="paymentMode"
-                      className="w-full px-3 py-2 border rounded-md bg-transparent text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none"
                     >
-                      <option value="CASH">Cash</option>
+                      <option value="CASH">Cash Drawer</option>
                       <option value="UPI">UPI / QR Code</option>
-                      <option value="BANK">Bank Transfer</option>
-                      <option value="CHEQUE">Cheque</option>
+                      <option value="BANK">IMPS / NEFT Transfer</option>
+                      <option value="CHEQUE">Cheque Clearance</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Reference ID (optional)</label>
+                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Reference ID (optional)</label>
                   <input 
                     name="referenceId"
                     type="text"
-                    placeholder="e.g. UPI Txn ID, Cheque number"
-                    className="w-full px-3 py-2 border rounded-md bg-transparent font-mono text-sm"
+                    placeholder="e.g. UPI Transaction ID, Cheque Number"
+                    className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 rounded-xl bg-transparent font-mono text-xs text-slate-800 outline-none"
                   />
                 </div>
 
-                <div className="bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground border">
-                  <strong>Repayment Allocation Rule:</strong> The paid amount will first satisfy any accrued interest due (₹{Math.round(balances.interestDue).toLocaleString('en-IN')}). Any excess amount will be applied to reduce the outstanding principal. If the principal reaches ₹0, the loan will automatically close.
+                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 text-[11px] text-muted-foreground leading-relaxed">
+                  <strong>Settlement Principle:</strong> Paid capital is allocated to accrued interest due first (₹{Math.round(balances.interestDue).toLocaleString('en-IN')}). Remaining balances directly reduce outstanding principal. Principal reaching ₹0 closes the contract automatically.
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full bg-primary text-primary-foreground py-2 rounded-md font-semibold text-sm hover:opacity-90 transition shadow-sm"
+                  className="w-full bg-primary text-white hover:gold-gradient-hover py-2.5 rounded-xl font-bold text-sm transition shadow-sm"
                 >
-                  Submit Repayment
+                  Submit Payment Record
                 </button>
               </form>
             </div>
           ) : (
-            <div className="bg-muted/30 border border-dashed rounded-2xl p-6 text-center text-muted-foreground">
-              <CheckCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="font-semibold text-sm">Loan Repayment Completed</p>
-              <p className="text-xs">No further payments are accepted since this loan is marked as {loan.status}.</p>
+            <div className="border border-slate-200/60 bg-slate-50/50 rounded-2xl p-8 text-center text-slate-500">
+              <CheckCircle className="h-8 w-8 text-success mx-auto mb-2.5" />
+              <p className="font-bold text-sm text-slate-800">Contract Settled & Closed</p>
+              <p className="text-xs text-muted-foreground mt-1">This loan is closed. Collateral gold can be released to client.</p>
             </div>
           )}
 
           {/* Payment Ledger */}
-          <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-5 border-b font-semibold font-heading text-md flex items-center gap-2">
+          <div className="luxury-card rounded-2xl overflow-hidden">
+            <div className="p-5 border-b font-semibold font-heading text-base text-slate-800 flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span>Payment Ledger</span>
+              <span>Repayment Ledger History</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-muted/50 border-b text-xs font-semibold">
+                <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3 text-muted-foreground">Date</th>
-                    <th className="px-6 py-3 text-muted-foreground">Paid Amount</th>
-                    <th className="px-6 py-3 text-muted-foreground">Interest Paid</th>
-                    <th className="px-6 py-3 text-muted-foreground">Principal Paid</th>
-                    <th className="px-6 py-3 text-muted-foreground">Mode</th>
+                    <th className="px-6 py-4">Transaction Date</th>
+                    <th className="px-6 py-4">Total Paid</th>
+                    <th className="px-6 py-4">Interest Component</th>
+                    <th className="px-6 py-4">Principal Component</th>
+                    <th className="px-6 py-4">Mode / Ref</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {loan.payments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-muted-foreground italic">
-                        No transactions recorded yet.
+                      <td colSpan={5} className="text-center py-12 text-slate-400 italic">
+                        No transactions recorded for this contract ledger.
                       </td>
                     </tr>
                   ) : (
                     [...loan.payments].sort((a,b)=> new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()).map((payment) => (
-                      <tr key={payment.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="px-6 py-4 text-xs font-mono">
+                      <tr key={payment.id} className="hover:bg-slate-50/40 transition-colors">
+                        <td className="px-6 py-4 text-xs font-mono text-slate-600">
                           {new Date(payment.paymentDate).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="px-6 py-4 font-semibold font-mono text-foreground">
+                        <td className="px-6 py-4 font-bold font-mono text-xs text-slate-800">
                           ₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-orange-600 font-mono">
+                        <td className="px-6 py-4 text-orange-600 font-mono text-xs">
                           ₹{Number(payment.interestPaid).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-success font-mono">
+                        <td className="px-6 py-4 text-success font-mono text-xs">
                           ₹{Number(payment.principalPaid).toLocaleString('en-IN')}
                         </td>
-                        <td className="px-6 py-4 text-xs font-medium">
+                        <td className="px-6 py-4 text-xs font-semibold text-slate-500">
                           {payment.paymentMode} {payment.referenceId ? `(${payment.referenceId})` : ''}
                         </td>
                       </tr>
@@ -288,69 +290,69 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
 
         {/* Right Side (Col 3): Financial Balances Card */}
         <div className="md:col-span-1 flex flex-col gap-4">
-          <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-6">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Loan Balances</h3>
+          <div className="luxury-card rounded-2xl p-6 flex flex-col gap-5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Capital Balances</h3>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Original Principal</span>
-              <span className="text-xl font-bold font-mono text-foreground">
+              <span className="text-[10px] uppercase text-muted-foreground font-semibold">Original Principal Disbursed</span>
+              <span className="text-lg font-bold font-mono text-slate-800">
                 ₹{Number(loan.principalAmount).toLocaleString('en-IN')}
               </span>
             </div>
 
-            <hr />
+            <hr className="border-slate-100" />
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Outstanding Principal</span>
-              <span className="text-xl font-bold font-mono text-primary">
+              <span className="text-[10px] uppercase text-muted-foreground font-semibold">Outstanding Principal</span>
+              <span className="text-lg font-bold font-mono text-slate-900">
                 ₹{Number(balances.outstandingPrincipal).toLocaleString('en-IN')}
               </span>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground flex justify-between items-center">
+              <span className="text-[10px] uppercase text-muted-foreground font-semibold flex justify-between items-center">
                 <span>Accrued Interest Due</span>
-                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-mono">
-                  {Number(loan.interestRate)}% monthly
+                <span className="text-[9px] bg-slate-100 text-slate-600 border border-slate-200/60 px-1.5 py-0.5 rounded font-mono font-bold">
+                  {Number(loan.interestRate)}% / Month
                 </span>
               </span>
-              <span className="text-xl font-bold font-mono text-orange-600">
+              <span className="text-lg font-bold font-mono text-orange-600">
                 ₹{Math.round(balances.interestDue).toLocaleString('en-IN')}
               </span>
             </div>
 
-            <hr />
+            <hr className="border-slate-100" />
 
             <div className="flex flex-col gap-1 bg-primary/5 p-4 rounded-xl border border-primary/10">
-              <span className="text-xs text-primary font-semibold">Total Settlement Due</span>
+              <span className="text-[10px] uppercase text-primary font-bold tracking-wider">Total Settlement Balance</span>
               <span className="text-2xl font-extrabold font-mono text-primary mt-1">
                 ₹{Math.round(balances.totalDue).toLocaleString('en-IN')}
               </span>
             </div>
           </div>
 
-          <div className="bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>Timeline Parameters</span>
+          <div className="luxury-card rounded-2xl p-6 flex flex-col gap-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3 flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-slate-400" />
+              <span>Contract Timeline</span>
             </h3>
 
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Disbursement Date</span>
-              <span className="font-semibold font-mono">{new Date(loan.startDate).toLocaleDateString('en-IN')}</span>
+              <span className="text-slate-500 font-medium">Disbursement Date</span>
+              <span className="font-bold font-mono text-slate-800">{new Date(loan.startDate).toLocaleDateString('en-IN')}</span>
             </div>
 
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Accrual Period</span>
-              <span className="font-semibold font-mono">
-                {Math.max(0, Math.floor((new Date().getTime() - new Date(loan.startDate).getTime()) / (1000 * 60 * 60 * 24)))} days
+              <span className="text-slate-500 font-medium">Interest Accrued For</span>
+              <span className="font-bold font-mono text-slate-800">
+                {Math.max(0, Math.floor((new Date().getTime() - new Date(loan.startDate).getTime()) / (1000 * 60 * 60 * 24)))} Days
               </span>
             </div>
 
             {loan.endDate && (
-              <div className="flex justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Settlement Date</span>
-                <span className="font-semibold font-mono text-success">{new Date(loan.endDate).toLocaleDateString('en-IN')}</span>
+              <div className="flex justify-between text-xs border-t border-slate-100 pt-3">
+                <span className="text-slate-500 font-medium">Maturity / End Date</span>
+                <span className="font-bold font-mono text-success">{new Date(loan.endDate).toLocaleDateString('en-IN')}</span>
               </div>
             )}
           </div>

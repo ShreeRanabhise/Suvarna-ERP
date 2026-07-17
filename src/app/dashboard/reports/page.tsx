@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { Landmark, Scale, DollarSign, Wallet, FileText, ChevronRight, Activity, AlertTriangle } from 'lucide-react'
+import { Landmark, Scale, DollarSign, Wallet, FileText, ChevronRight, Activity, AlertTriangle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
@@ -103,66 +103,71 @@ export default async function ReportsPage() {
   }))
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-heading tracking-tight">Reports & Analytics</h2>
-        <ExportButton 
-          data={excelExportData} 
-          fileName={`Suvarna_Collections_Report_${new Date().getFullYear()}`} 
-          sheetName="Collections Ledger"
-          buttonText="Export Collections Ledger"
-        />
+    <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-heading tracking-tight">Reports & Ledger Analytics</h2>
+          <p className="text-xs text-muted-foreground mt-1">Audit historical disbursements, payment flows, and gold vault weights</p>
+        </div>
+        <div>
+          <ExportButton 
+            data={excelExportData} 
+            fileName={`Suvarna_Collections_Report_${new Date().getFullYear()}`} 
+            sheetName="Collections Ledger"
+            buttonText="Export Collections Ledger"
+          />
+        </div>
       </div>
 
       {/* Analytics KPI cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Disbursements */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow p-6 flex flex-col justify-between">
+        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Total Disbursements</h3>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Disbursements</h3>
+            <DollarSign className="h-4.5 w-4.5 text-muted-foreground" />
           </div>
-          <div>
-            <div className="text-2xl font-bold font-mono">₹{totalDisbursed.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground mt-1">Cumulative loans created</p>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold font-mono text-slate-900 leading-none">₹{totalDisbursed.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-muted-foreground mt-2">Cumulative loans created</p>
           </div>
         </div>
 
         {/* Collections */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow p-6 flex flex-col justify-between">
+        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Total Collections</h3>
-            <Wallet className="h-4 w-4 text-success" />
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Collections</h3>
+            <Wallet className="h-4.5 w-4.5 text-success" />
           </div>
-          <div>
-            <div className="text-2xl font-bold font-mono text-success">₹{totalCollected.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ₹{totalInterestCollected.toLocaleString('en-IN')} interest | ₹{totalPrincipalCollected.toLocaleString('en-IN')} principal
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold font-mono text-success leading-none">₹{totalCollected.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              ₹{totalInterestCollected.toLocaleString('en-IN')} int. | ₹{totalPrincipalCollected.toLocaleString('en-IN')} prin.
             </p>
           </div>
         </div>
 
         {/* Outstanding Active Principal */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow p-6 flex flex-col justify-between">
+        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Outstanding Principal</h3>
-            <Landmark className="h-4 w-4 text-primary" />
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outstanding Capital</h3>
+            <Landmark className="h-4.5 w-4.5 text-primary" />
           </div>
-          <div>
-            <div className="text-2xl font-bold font-mono text-primary">₹{totalOutstandingPrincipal.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground mt-1">Current active capital in market</p>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold font-mono text-primary leading-none">₹{totalOutstandingPrincipal.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-muted-foreground mt-2">Current active market principal</p>
           </div>
         </div>
 
         {/* Locker Inventory */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow p-6 flex flex-col justify-between">
+        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Locker Gold Inventory</h3>
-            <Scale className="h-4 w-4 text-yellow-600" />
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vault Inventory</h3>
+            <Scale className="h-4.5 w-4.5 text-yellow-600" />
           </div>
-          <div>
-            <div className="text-2xl font-bold font-mono text-yellow-600">{totalGoldLockerGrams.toFixed(2)} g</div>
-            <p className="text-xs text-muted-foreground mt-1">Total collateral weight in vault</p>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold font-mono text-slate-900 leading-none">{totalGoldLockerGrams.toFixed(2)} g</div>
+            <p className="text-[10px] text-muted-foreground mt-2">Total weight in vault lockers</p>
           </div>
         </div>
       </div>
@@ -170,17 +175,17 @@ export default async function ReportsPage() {
       {/* Grid: Gold Inventory by Purity & NPA Overview */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Gold Inventory Breakdown */}
-        <div className="md:col-span-1 bg-card border rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vault Inventory by Purity</h3>
+        <div className="md:col-span-1 luxury-card rounded-2xl p-6 flex flex-col gap-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Vault Stock Purity</h3>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3.5">
             {Object.keys(goldInventoryByPurity).length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No gold collateral in locker.</p>
+              <p className="text-xs text-slate-400 italic">No gold collateral in lockers.</p>
             ) : (
               Object.entries(goldInventoryByPurity).map(([purity, weight]) => (
-                <div key={purity} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-                  <span className="font-semibold text-primary">{purity} Gold</span>
-                  <span className="font-mono text-foreground font-semibold">{weight.toFixed(2)} grams</span>
+                <div key={purity} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
+                  <span className="font-bold text-primary text-xs">{purity} Standard Gold</span>
+                  <span className="font-mono text-xs text-slate-800 font-bold">{weight.toFixed(2)} g</span>
                 </div>
               ))
             )}
@@ -188,51 +193,52 @@ export default async function ReportsPage() {
         </div>
 
         {/* Overdue/NPA Loans tracker */}
-        <div className="md:col-span-2 bg-card border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-5 border-b font-semibold font-heading text-md flex items-center justify-between bg-destructive/5 border-destructive/10">
-            <span className="flex items-center gap-2 text-destructive font-semibold">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Overdue & NPA Monitor</span>
+        <div className="md:col-span-2 luxury-card rounded-2xl overflow-hidden flex flex-col">
+          <div className="p-5 border-b font-semibold font-heading text-sm flex items-center justify-between bg-destructive/[0.03] border-destructive/10">
+            <span className="flex items-center gap-2 text-destructive font-bold">
+              <AlertTriangle className="h-4.5 w-4.5" />
+              <span>NPA & Overdue Tracker</span>
             </span>
-            <span className="text-xs font-bold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
-              {overdueLoans.length} Loans
+            <span className="text-[10px] font-extrabold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20 uppercase font-mono">
+              {overdueLoans.length} Alerts
             </span>
           </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-sm text-left">
-              <thead className="bg-muted/50 border-b text-xs font-semibold">
+              <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-3 text-muted-foreground">Loan ID</th>
-                  <th className="px-6 py-3 text-muted-foreground">Customer</th>
-                  <th className="px-6 py-3 text-muted-foreground">Outstanding Principal</th>
-                  <th className="px-6 py-3 text-muted-foreground">Total Settlement</th>
-                  <th className="px-6 py-3 text-right text-muted-foreground">Action</th>
+                  <th className="px-6 py-3.5">Contract ID</th>
+                  <th className="px-6 py-3.5">Customer</th>
+                  <th className="px-6 py-3.5">Overdue Principal</th>
+                  <th className="px-6 py-3.5">Total Settlement</th>
+                  <th className="px-6 py-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {overdueLoans.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground italic">
+                    <td colSpan={5} className="text-center py-12 text-slate-400 italic text-xs">
                       Zero NPAs. All active loans are within their timeline limits!
                     </td>
                   </tr>
                 ) : (
                   overdueLoans.map((loan) => (
-                    <tr key={loan.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-6 py-4 font-mono font-medium text-destructive">{loan.loanNumber}</td>
-                      <td className="px-6 py-4">
+                    <tr key={loan.id} className="hover:bg-slate-50/40 transition-colors">
+                      <td className="px-6 py-3.5 font-mono text-xs font-bold text-destructive">{loan.loanNumber}</td>
+                      <td className="px-6 py-3.5 text-xs text-slate-800 font-semibold">
                         {loan.customer.firstName} {loan.customer.lastName}
                       </td>
-                      <td className="px-6 py-4 font-mono">₹{loan.outstandingPrincipal.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 font-mono text-destructive font-semibold">
+                      <td className="px-6 py-3.5 font-mono text-xs text-slate-600">₹{Number(loan.outstandingPrincipal).toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-3.5 font-mono text-xs text-destructive font-bold">
                         ₹{Math.round(loan.totalDue).toLocaleString('en-IN')}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-3.5 text-right">
                         <Link 
                           href={`/dashboard/loans/${loan.id}`}
-                          className="text-primary hover:underline text-xs font-semibold"
+                          className="inline-flex items-center gap-1 border hover:bg-slate-50 text-slate-600 px-3 py-1 rounded-xl text-[11px] font-semibold transition"
                         >
-                          Details
+                          <span>Manage</span>
+                          <ArrowRight className="h-3 w-3 text-slate-400" />
                         </Link>
                       </td>
                     </tr>
@@ -245,59 +251,63 @@ export default async function ReportsPage() {
       </div>
 
       {/* Transactions Ledger */}
-      <div className="bg-card border rounded-2xl shadow-sm">
-        <div className="p-5 border-b font-semibold font-heading text-md flex items-center gap-2">
+      <div className="luxury-card rounded-2xl overflow-hidden">
+        <div className="p-5 border-b font-semibold font-heading text-base text-slate-800 flex items-center gap-2">
           <Activity className="h-4 w-4 text-muted-foreground" />
           <span>Collections Transaction Ledger</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 border-b text-xs font-semibold">
+            <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-3 text-muted-foreground">Date</th>
-                <th className="px-6 py-3 text-muted-foreground">Loan ID</th>
-                <th className="px-6 py-3 text-muted-foreground">Customer</th>
-                <th className="px-6 py-3 text-muted-foreground">Amount Paid</th>
-                <th className="px-6 py-3 text-muted-foreground">Principal Paid</th>
-                <th className="px-6 py-3 text-muted-foreground">Interest Paid</th>
-                <th className="px-6 py-3 text-muted-foreground">Mode</th>
+                <th className="px-6 py-4">Transaction Date</th>
+                <th className="px-6 py-4">Contract Reference</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Amount Paid</th>
+                <th className="px-6 py-4">Principal Component</th>
+                <th className="px-6 py-4">Interest Component</th>
+                <th className="px-6 py-4">Mode</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {payments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-muted-foreground italic">
+                  <td colSpan={7} className="text-center py-12 text-slate-400 italic">
                     No transactions recorded on this platform yet.
                   </td>
                 </tr>
               ) : (
                 payments.slice(0, 10).map((payment) => (
-                  <tr key={payment.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-6 py-4 text-xs font-mono">
+                  <tr key={payment.id} className="hover:bg-slate-50/40 transition-colors">
+                    <td className="px-6 py-4 text-xs font-mono text-slate-600">
                       {new Date(payment.paymentDate).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </td>
-                    <td className="px-6 py-4 font-mono font-medium">{payment.loan.loanNumber}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">{payment.loan.loanNumber}</td>
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-800">
                       {payment.loan.customer.firstName} {payment.loan.customer.lastName}
                     </td>
-                    <td className="px-6 py-4 font-bold font-mono text-foreground">
+                    <td className="px-6 py-4 font-bold font-mono text-xs text-slate-800">
                       ₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-success font-mono">
+                    <td className="px-6 py-4 text-success font-mono text-xs font-bold">
                       ₹{Number(payment.principalPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-orange-600 font-mono">
+                    <td className="px-6 py-4 text-orange-600 font-mono text-xs font-bold">
                       ₹{Number(payment.interestPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-xs font-medium uppercase">{payment.paymentMode}</td>
+                    <td className="px-6 py-4 text-xs">
+                      <span className="inline-flex items-center text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                        {payment.paymentMode}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
           {payments.length > 10 && (
-            <div className="p-3 text-center border-t text-xs text-muted-foreground">
-              Showing recent 10 transactions. Export the ledger to view all {payments.length} transactions.
+            <div className="p-4 text-center border-t border-slate-100 text-xs text-muted-foreground font-medium bg-slate-50/45">
+              Showing recent 10 transactions. Export the collections ledger to review all {payments.length} transactions.
             </div>
           )}
         </div>

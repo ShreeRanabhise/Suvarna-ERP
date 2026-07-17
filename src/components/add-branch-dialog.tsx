@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createBranch } from '@/app/actions'
+import { Building, X } from 'lucide-react'
 
 export default function AddBranchDialog() {
   const [isOpen, setIsOpen] = useState(false)
@@ -30,43 +31,56 @@ export default function AddBranchDialog() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm hover:opacity-90 transition"
+        className="flex items-center gap-2 bg-primary text-white hover:gold-gradient-hover px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition"
       >
-        Add Branch
+        <Building className="h-4 w-4" />
+        <span>Add Branch</span>
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background p-6 rounded-xl border shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold font-heading mb-4 text-primary">Add New Branch</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-w-md w-full mx-4 relative">
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-lg font-bold font-heading mb-4 text-slate-800 flex items-center gap-2">
+              <Building className="h-5 w-5 text-primary" />
+              <span>Create New Branch</span>
+            </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Branch Name *</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Branch Identifier Name *</label>
                 <input
                   name="name"
                   required
                   placeholder="e.g. South Mumbai Branch"
-                  className="w-full px-3 py-2 border rounded-md bg-transparent"
+                  className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                 />
               </div>
 
               {error && (
-                <p className="text-destructive text-sm bg-destructive/10 p-2 rounded">{error}</p>
+                <div className="text-destructive text-xs font-bold bg-destructive/10 border border-destructive/20 p-2.5 rounded-xl uppercase tracking-wide">
+                  {error}
+                </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2 border-t mt-4">
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 border rounded-md hover:bg-muted text-sm font-medium"
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-600 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                  className="px-4 py-2 bg-primary text-white hover:gold-gradient-hover rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50"
                 >
                   {loading ? 'Adding...' : 'Add Branch'}
                 </button>

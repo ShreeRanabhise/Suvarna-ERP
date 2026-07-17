@@ -31,9 +31,9 @@ export default function ExportButton({
   return (
     <button 
       onClick={handleExport}
-      className="flex items-center gap-2 border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary px-4 py-2 rounded-md font-semibold text-sm transition"
+      className="inline-flex items-center gap-2 border border-slate-200 hover:border-primary/20 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition"
     >
-      <Download className="h-4 w-4" />
+      <Download className="h-4 w-4 text-slate-400" />
       <span>{buttonText}</span>
     </button>
   )

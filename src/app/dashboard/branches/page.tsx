@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import AddBranchDialog from "@/components/add-branch-dialog"
 import DeleteBranchButton from "@/components/delete-branch-button"
-import { Building, Users, Banknote, Award } from "lucide-react"
+import { Building, Users, Banknote, Award, Sparkles, Calendar } from "lucide-react"
 
 export default async function BranchesPage() {
   const supabase = await createClient()
@@ -26,24 +26,41 @@ export default async function BranchesPage() {
   // If not Enterprise, render an upgrade page
   if (!isEnterprise) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-card border rounded-xl shadow-sm text-center max-w-2xl mx-auto my-12 gap-4 animate-in fade-in duration-200">
-        <div className="p-3 bg-primary/10 rounded-full text-primary">
+      <div className="flex flex-col items-center justify-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-12 gap-6 animate-in fade-in duration-200">
+        <div className="p-3 bg-primary/10 rounded-2xl text-primary border border-primary/20 shadow-sm">
           <Award className="h-10 w-10" />
         </div>
-        <h3 className="text-2xl font-bold font-heading">Upgrade to Enterprise</h3>
-        <p className="text-muted-foreground">
-          Branch management and multi-branch operations are exclusive features of our <strong>Enterprise Plan</strong>.
-        </p>
-        <div className="border-t pt-4 w-full text-left space-y-2 text-sm">
-          <p className="font-semibold text-muted-foreground">Enterprise Plan includes:</p>
-          <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-            <li>Unlimited customers and gold loan accounts</li>
-            <li>Multi-branch system and staff role assignments</li>
-            <li>Automatic WhatsApp reminders (+₹499/mo)</li>
-            <li>Advanced reports and audit trails</li>
+        <div>
+          <h3 className="text-2xl font-bold font-heading text-slate-900">Upgrade to Enterprise Plan</h3>
+          <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+            Multi-branch management and staff role assignments are exclusive features of the <strong>Enterprise Plan</strong>.
+          </p>
+        </div>
+        <div className="border-t border-slate-100 pt-5 w-full text-left space-y-3 text-sm">
+          <p className="font-bold text-slate-800 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span>Enterprise Plan Privileges:</span>
+          </p>
+          <ul className="grid grid-cols-2 gap-3 text-slate-600 pl-1 font-medium">
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span>Unlimited branches</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span>Dedicated support</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span>Automatic reminders</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span>Advanced auditing</span>
+            </li>
           </ul>
         </div>
-        <button className="mt-4 px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-md hover:opacity-90 transition">
+        <button className="w-full bg-primary text-white hover:gold-gradient-hover py-2.5 rounded-xl font-bold text-sm transition shadow-sm mt-2">
           Contact Sales to Upgrade
         </button>
       </div>
@@ -70,46 +87,48 @@ export default async function BranchesPage() {
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-heading tracking-tight">Branch Management</h2>
-          <p className="text-sm text-muted-foreground mt-1">Create and manage your branch offices.</p>
+          <h2 className="text-3xl font-heading tracking-tight">Branches</h2>
+          <p className="text-xs text-muted-foreground mt-1">Manage physical gold vault branch counters</p>
         </div>
         <AddBranchDialog />
       </div>
 
-      <div className="rounded-xl border bg-card text-card-foreground shadow">
-        <div className="p-0">
+      <div className="luxury-card rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Branch Name</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Staff Members</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Customers</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Active Loans</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground">Created Date</th>
-                <th className="px-6 py-3 font-medium text-muted-foreground text-right">Actions</th>
+                <th className="px-6 py-4">Branch Detail</th>
+                <th className="px-6 py-4">Staff Members</th>
+                <th className="px-6 py-4">Active Customers</th>
+                <th className="px-6 py-4">Active Loans</th>
+                <th className="px-6 py-4">Created Date</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {branches.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No branches found. Click "Add Branch" to create one.
+                  <td colSpan={6} className="text-center py-12 text-slate-400 italic">
+                    No branches configured. Click "Add Branch" to begin.
                   </td>
                 </tr>
               ) : (
                 branches.map((branch) => (
-                  <tr key={branch.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-6 py-4 font-medium flex items-center gap-2">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      {branch.name}
+                  <tr key={branch.id} className="hover:bg-slate-50/40 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-800 flex items-center gap-2.5">
+                      <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 border">
+                        <Building className="h-4 w-4" />
+                      </div>
+                      <span>{branch.name}</span>
                     </td>
-                    <td className="px-6 py-4 font-mono font-medium">{branch._count.users}</td>
-                    <td className="px-6 py-4 font-mono">{branch._count.customers}</td>
-                    <td className="px-6 py-4 font-mono">{branch._count.loans}</td>
-                    <td className="px-6 py-4 text-xs font-mono">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">{branch._count.users}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-600">{branch._count.customers}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-600">{branch._count.loans}</td>
+                    <td className="px-6 py-4 text-xs font-mono text-slate-500">
                       {new Date(branch.createdAt).toLocaleDateString('en-IN')}
                     </td>
                     <td className="px-6 py-4 text-right">
