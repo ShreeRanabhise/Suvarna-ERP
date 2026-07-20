@@ -4,7 +4,8 @@ import { ArrowLeft, Landmark, Calendar, Percent, Scale, TrendingDown, DollarSign
 import { createClient } from '@/lib/supabase/server'
 import prisma from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
-import { repayLoan, updateLoanStatus } from '@/app/actions'
+import { RepaymentForm } from './repayment-form'
+import { StatusButtons } from './status-buttons'
 
 export default async function LoanDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id: loanId } = await props.params
@@ -14,7 +15,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
   if (!user) redirect('/login')
 
   const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
+    where: { authId: user.id }
   })
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
@@ -35,26 +36,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
   const balances = calculateLoanBalances(loan as any)
   const pledge = loan.pledgedItems[0]
 
-  // Server actions wrapper to satisfy form action type constraints (Promise<void>)
-  const handleSetOverdue = async () => {
-    'use server'
-    await updateLoanStatus(loan.id, 'OVERDUE')
-  }
-
-  const handleSetAuction = async () => {
-    'use server'
-    await updateLoanStatus(loan.id, 'AUCTION')
-  }
-
-  const handleSetActive = async () => {
-    'use server'
-    await updateLoanStatus(loan.id, 'ACTIVE')
-  }
-
-  const handleRepay = async (formData: FormData) => {
-    'use server'
-    await repayLoan(formData)
-  }
+  // Balances are used in the client forms
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
@@ -105,29 +87,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             {loan.status === 'CLOSED' && <CheckCircle className="h-3.5 w-3.5" />}
             {loan.status}
           </span>
-          
-          {loan.status === 'ACTIVE' && (
-            <div className="flex gap-1.5 mt-1">
-              <form action={handleSetOverdue}>
-                <button type="submit" className="text-[10px] border border-slate-200 hover:border-destructive/20 bg-white px-2.5 py-1.5 rounded-xl text-destructive hover:bg-destructive/5 font-bold transition">
-                  Mark Overdue
-                </button>
-              </form>
-              <form action={handleSetAuction}>
-                <button type="submit" className="text-[10px] border border-slate-200 hover:border-orange-500/20 bg-white px-2.5 py-1.5 rounded-xl text-orange-600 hover:bg-orange-50 font-bold transition">
-                  Send to Auction
-                </button>
-              </form>
-            </div>
-          )}
-
-          {loan.status !== 'ACTIVE' && loan.status !== 'CLOSED' && (
-            <form action={handleSetActive} className="mt-1">
-              <button type="submit" className="text-[10px] border border-primary/20 bg-white px-3 py-1.5 rounded-xl text-primary hover:bg-primary/5 font-bold transition">
-                Revert to Active
-              </button>
-            </form>
-          )}
+          <StatusButtons loanId={loan.id} status={loan.status} />
         </div>
       </div>
 
@@ -177,57 +137,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             <div className="luxury-card rounded-2xl p-6 flex flex-col gap-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Submit Repayment Transaction</h3>
               
-              <form action={handleRepay} className="space-y-4">
-                <input type="hidden" name="loanId" value={loan.id} />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Repayment Amount (₹)</label>
-                    <input 
-                      name="amountPaid"
-                      type="number"
-                      required
-                      min="1"
-                      step="0.01"
-                      placeholder="e.g. 5000"
-                      className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-xl bg-transparent font-mono text-sm font-bold text-slate-800 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Payment Mode</label>
-                    <select 
-                      name="paymentMode"
-                      className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none"
-                    >
-                      <option value="CASH">Cash Drawer</option>
-                      <option value="UPI">UPI / QR Code</option>
-                      <option value="BANK">IMPS / NEFT Transfer</option>
-                      <option value="CHEQUE">Cheque Clearance</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Reference ID (optional)</label>
-                  <input 
-                    name="referenceId"
-                    type="text"
-                    placeholder="e.g. UPI Transaction ID, Cheque Number"
-                    className="w-full px-3 py-2 border border-slate-200 focus:border-primary/50 rounded-xl bg-transparent font-mono text-xs text-slate-800 outline-none"
-                  />
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 text-[11px] text-muted-foreground leading-relaxed">
-                  <strong>Settlement Principle:</strong> Paid capital is allocated to accrued interest due first (₹{Math.round(balances.interestDue).toLocaleString('en-IN')}). Remaining balances directly reduce outstanding principal. Principal reaching ₹0 closes the contract automatically.
-                </div>
-
-                <button 
-                  type="submit"
-                  className="w-full bg-primary text-white hover:gold-gradient-hover py-2.5 rounded-xl font-bold text-sm transition shadow-sm"
-                >
-                  Submit Payment Record
-                </button>
-              </form>
+              <RepaymentForm loanId={loan.id} interestDue={balances.interestDue} />
             </div>
           ) : (
             <div className="border border-slate-200/60 bg-slate-50/50 rounded-2xl p-8 text-center text-slate-500">

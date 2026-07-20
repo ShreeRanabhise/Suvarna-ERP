@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client'
+const Decimal = Prisma.Decimal
 export interface Payment {
   id: string
   loanId: string
@@ -30,14 +32,14 @@ export interface Loan {
 }
 
 export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date()) {
-  const principalAmount = Number(loan.principalAmount || 0)
-  const interestRate = Number(loan.interestRate || 0)
+  const principalAmount = new Decimal(loan.principalAmount || 0)
+  const interestRate = new Decimal(loan.interestRate || 0)
 
   let outstandingPrincipal = principalAmount
   let lastDate = new Date(loan.startDate)
-  let interestAccruedTotal = 0
-  let interestPaidTotal = 0
-  let principalPaidTotal = 0
+  let interestAccruedTotal = new Decimal(0)
+  let interestPaidTotal = new Decimal(0)
+  let principalPaidTotal = new Decimal(0)
 
   // Sort payments chronologically
   const sortedPayments = [...(loan.payments || [])].sort(
@@ -46,38 +48,44 @@ export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date())
 
   for (const payment of sortedPayments) {
     const paymentDate = new Date(payment.paymentDate)
-    const paymentInterestPaid = Number(payment.interestPaid || 0)
-    const paymentPrincipalPaid = Number(payment.principalPaid || 0)
+    const paymentInterestPaid = new Decimal(payment.interestPaid || 0)
+    const paymentPrincipalPaid = new Decimal(payment.principalPaid || 0)
     
     // Calculate interest accrued from the last date to this payment date
-    const days = Math.max(0, Math.floor((paymentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
-    const accrued = outstandingPrincipal * (interestRate / 100) * (days / 30)
+    const msDiff = Math.max(0, paymentDate.getTime() - lastDate.getTime())
+    const days = new Decimal(msDiff).dividedBy(1000 * 60 * 60 * 24).floor()
     
-    interestAccruedTotal += accrued
-    interestPaidTotal += paymentInterestPaid
-    principalPaidTotal += paymentPrincipalPaid
+    // accrued = outstandingPrincipal * (interestRate / 100) * (days / 30)
+    const ratePerDay = interestRate.dividedBy(100).dividedBy(30)
+    const accrued = outstandingPrincipal.times(ratePerDay).times(days)
+    
+    interestAccruedTotal = interestAccruedTotal.plus(accrued)
+    interestPaidTotal = interestPaidTotal.plus(paymentInterestPaid)
+    principalPaidTotal = principalPaidTotal.plus(paymentPrincipalPaid)
     
     // Deduct principal paid
-    outstandingPrincipal -= paymentPrincipalPaid
+    outstandingPrincipal = outstandingPrincipal.minus(paymentPrincipalPaid)
     lastDate = paymentDate
   }
 
   // Calculate interest accrued from the last transaction date to the targetDate
-  const days = Math.max(0, Math.floor((targetDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)))
-  const accruedSinceLast = outstandingPrincipal * (interestRate / 100) * (days / 30)
+  const msDiff = Math.max(0, targetDate.getTime() - lastDate.getTime())
+  const daysSinceLast = new Decimal(msDiff).dividedBy(1000 * 60 * 60 * 24).floor()
   
-  interestAccruedTotal += accruedSinceLast
+  const ratePerDay = interestRate.dividedBy(100).dividedBy(30)
+  const accruedSinceLast = outstandingPrincipal.times(ratePerDay).times(daysSinceLast)
+  
+  interestAccruedTotal = interestAccruedTotal.plus(accruedSinceLast)
 
-  const interestDue = Math.max(0, interestAccruedTotal - interestPaidTotal)
-  const totalDue = Math.max(0, outstandingPrincipal + interestDue)
+  const interestDue = Decimal.max(0, interestAccruedTotal.minus(interestPaidTotal))
+  const totalDue = Decimal.max(0, outstandingPrincipal.plus(interestDue))
 
   return {
-    outstandingPrincipal: Math.max(0, outstandingPrincipal),
-    interestAccruedTotal,
-    interestPaid: interestPaidTotal,
-    interestDue,
-    totalDue,
-    daysSinceLast: days,
+    outstandingPrincipal: Decimal.max(0, outstandingPrincipal).toDecimalPlaces(2).toNumber(),
+    interestAccruedTotal: interestAccruedTotal.toDecimalPlaces(2).toNumber(),
+    interestPaid: interestPaidTotal.toDecimalPlaces(2).toNumber(),
+    interestDue: interestDue.toDecimalPlaces(2).toNumber(),
+    totalDue: totalDue.toDecimalPlaces(2).toNumber(),
+    daysSinceLast: daysSinceLast.toNumber(),
   }
 }
-

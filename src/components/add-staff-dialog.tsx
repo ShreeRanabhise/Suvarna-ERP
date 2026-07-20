@@ -22,9 +22,11 @@ export default function AddStaffDialog({ branches }: { branches: Branch[] }) {
     const formData = new FormData(event.currentTarget)
     try {
       const res = await createStaffMember(formData)
-      if (res.success) {
-        setIsOpen(false)
+      if (!res.success) {
+        setError(res.error)
+        return
       }
+      setIsOpen(false)
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
     } finally {

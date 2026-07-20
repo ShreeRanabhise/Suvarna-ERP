@@ -3,8 +3,14 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { CustomerService } from '@/services/customer.service'
+import { LoanService } from '@/services/loan.service'
 import { z } from 'zod'
-import { calculateLoanBalances } from '@/lib/loan-utils'
+
+export type ActionResult<T = void> = 
+  | { success: true; data?: T } 
+  | { success: false; error: string }
 
 // Validation Schemas
 const customerSchema = z.object({
@@ -27,15 +33,14 @@ const loanSchema = z.object({
 })
 
 
-// Helper to get current tenant
+// We define a local helper since the imported one might cause cyclic dependencies or different semantics.
 async function getTenantContext() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  // In a real implementation, we'd fetch the user from our DB to get their shopId and role
   const dbUser = await prisma.user.findUnique({
-    where: { email: user.email },
+    where: { authId: user.id },
     select: { id: true, shopId: true, role: true }
   })
   if (!dbUser || !dbUser.shopId) throw new Error('No tenant associated')
@@ -43,159 +48,174 @@ async function getTenantContext() {
   return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role }
 }
 
-export async function createCustomer(formData: FormData) {
-  const { shopId, userId } = await getTenantContext()
-  
-  // Check subscription limits (max 100 customers for Standard)
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: {
-      subscriptionPlan: true,
-      _count: { select: { customers: true } }
+export async function createCustomer(formData: FormData): Promise<ActionResult<{ customerId: string }>> {
+  try {
+    const { shopId, userId } = await getTenantContext()
+    
+    const data = {
+      firstName: formData.get('firstName') as string,
+      lastName: formData.get('lastName') as string,
+      phone: formData.get('phone') as string,
+      aadhaar: formData.get('aadhaar') as string,
+      address: formData.get('address') as string,
     }
-  })
 
-  if (shop?.subscriptionPlan === 'STANDARD' && shop._count.customers >= 100) {
-    throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
-  }
+    const parsed = customerSchema.parse(data)
 
-  const data = {
-    firstName: formData.get('firstName') as string,
-    lastName: formData.get('lastName') as string,
-    phone: formData.get('phone') as string,
-    aadhaar: formData.get('aadhaar') as string,
-    address: formData.get('address') as string,
-  }
+    const customer = await prisma.$transaction(async (tx) => {
+      // Pessimistically lock the shop row to prevent concurrent subscription limit bypass
+      await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
+      
+      const shop = await tx.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          subscriptionPlan: true,
+          _count: { select: { customers: true } }
+        }
+      })
 
-  const parsed = customerSchema.parse(data)
-
-  const customer = await prisma.$transaction(async (tx) => {
-    const newCustomer = await tx.customer.create({
-      data: {
-        ...parsed,
-        shopId,
+      if (shop?.subscriptionPlan === 'STANDARD' && (shop._count?.customers || 0) >= 100) {
+        throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
       }
+
+      const newCustomer = await tx.customer.create({
+        data: {
+          ...parsed,
+          shopId,
+        }
+      })
+
+      // Write initial KYC Version
+      await tx.customerKYCVersion.create({
+        data: {
+          customerId: newCustomer.id,
+          version: 1,
+          firstName: parsed.firstName,
+          lastName: parsed.lastName,
+          phone: parsed.phone,
+          email: null,
+          aadhaar: parsed.aadhaar,
+          address: parsed.address,
+          changedById: userId,
+          reason: 'Initial registration'
+        }
+      })
+      
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'CREATE_CUSTOMER',
+          entity: 'CUSTOMER',
+          entityId: newCustomer.id,
+        }
+      })
+
+      return newCustomer
     })
 
-    // Write initial KYC Version
-    await tx.customerKYCVersion.create({
-      data: {
-        customerId: newCustomer.id,
-        version: 1,
-        firstName: parsed.firstName,
-        lastName: parsed.lastName,
-        phone: parsed.phone,
-        email: null,
-        aadhaar: parsed.aadhaar,
-        address: parsed.address,
-        changedById: userId,
-        reason: 'Initial registration'
-      }
-    })
-
-    return newCustomer
-  })
-
-  await prisma.auditLog.create({
-    data: {
-      shopId,
-      userId,
-      action: 'CREATE_CUSTOMER',
-      entity: 'CUSTOMER',
-      entityId: customer.id,
-    }
-  })
-
-  revalidatePath('/dashboard/customers')
-  return { success: true, customerId: customer.id }
+    revalidatePath('/dashboard/customers')
+    return { success: true, data: { customerId: customer.id } }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
-export async function createLoan(formData: FormData) {
-  const { shopId, userId } = await getTenantContext()
-  
-  const data = {
-    customerId: formData.get('customerId') as string,
-    principalAmount: Number(formData.get('principalAmount')),
-    interestRate: Number(formData.get('interestRate')),
-    ltvPercentage: Number(formData.get('ltvPercentage')),
-    itemName: formData.get('itemName') as string,
-    weightGrams: Number(formData.get('weightGrams')),
-    purity: formData.get('purity') as string,
-    valuation: Number(formData.get('valuation')),
-  }
+export async function createLoan(formData: FormData): Promise<ActionResult<{ loanId: string }>> {
+  try {
+    const { shopId, userId } = await getTenantContext()
+    
+    const data = {
+      customerId: formData.get('customerId') as string,
+      principalAmount: Number(formData.get('principalAmount')),
+      interestRate: Number(formData.get('interestRate')),
+      ltvPercentage: Number(formData.get('ltvPercentage')),
+      itemName: formData.get('itemName') as string,
+      weightGrams: Number(formData.get('weightGrams')),
+      purity: formData.get('purity') as string,
+      valuation: Number(formData.get('valuation')),
+    }
+    
+    const idempotencyKey = (formData.get('idempotencyKey') as string) || crypto.randomUUID()
 
-  const parsed = loanSchema.parse(data)
+    const parsed = loanSchema.parse(data)
 
-  // Validate LTV
-  const maxAllowedLoan = (parsed.valuation * parsed.ltvPercentage) / 100
-  if (parsed.principalAmount > maxAllowedLoan) {
-    throw new Error('Loan amount exceeds allowed LTV')
-  }
+    // Validate LTV
+    const maxAllowedLoan = (parsed.valuation * parsed.ltvPercentage) / 100
+    if (parsed.principalAmount > maxAllowedLoan) {
+      throw new Error('Loan amount exceeds allowed LTV')
+    }
 
-  // Generate Loan Number SGL-{YEAR}-{COUNT}
-  const count = await prisma.loan.count({ where: { shopId } })
-  const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+    const loan = await prisma.$transaction(async (tx) => {
+      // Pessimistically lock the shop row to guarantee sequential loan numbers
+      await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
+      
+      // Generate Loan Number SGL-{YEAR}-{COUNT} inside the lock
+      const count = await tx.loan.count({ where: { shopId } })
+      const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
 
-  const loan = await prisma.$transaction(async (tx) => {
-    const newLoan = await tx.loan.create({
-      data: {
-        loanNumber,
-        shopId,
-        customerId: parsed.customerId,
-        principalAmount: parsed.principalAmount,
-        interestRate: parsed.interestRate,
-        ltvPercentage: parsed.ltvPercentage,
-        pledgedItems: {
-          create: {
-            name: parsed.itemName,
-            weightGrams: parsed.weightGrams,
-            purity: parsed.purity,
-            valuation: parsed.valuation
+      const newLoan = await tx.loan.create({
+        data: {
+          loanNumber,
+          shopId,
+          customerId: parsed.customerId,
+          principalAmount: parsed.principalAmount,
+          interestRate: parsed.interestRate,
+          ltvPercentage: parsed.ltvPercentage,
+          pledgedItems: {
+            create: {
+              name: parsed.itemName,
+              weightGrams: parsed.weightGrams,
+              purity: parsed.purity,
+              valuation: parsed.valuation
+            }
           }
         }
-      }
+      })
+
+      // Record disbursement debit in double-entry ledger
+      await tx.ledgerEntry.create({
+        data: {
+          shopId,
+          loanId: newLoan.id,
+          category: 'PRINCIPAL',
+          type: 'DEBIT',
+          amount: parsed.principalAmount,
+          balanceAfter: parsed.principalAmount,
+          performedBy: userId,
+          idempotencyKey: `disburse-loan-principal-${idempotencyKey}` // Secure client idempotency
+        }
+      })
+
+      // Log state machine status initialization
+      await tx.loanStateHistory.create({
+        data: {
+          loanId: newLoan.id,
+          fromStatus: 'ACTIVE',
+          toStatus: 'ACTIVE',
+          changedById: userId,
+          details: 'Initial disburse'
+        }
+      })
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'CREATE_LOAN',
+          entity: 'LOAN',
+          entityId: newLoan.id,
+        }
+      })
+
+      return newLoan
     })
 
-    // Record disbursement debit in double-entry ledger
-    await tx.ledgerEntry.create({
-      data: {
-        shopId,
-        loanId: newLoan.id,
-        category: 'PRINCIPAL',
-        type: 'DEBIT',
-        amount: parsed.principalAmount,
-        balanceAfter: parsed.principalAmount,
-        performedBy: userId,
-        idempotencyKey: `disburse-loan-principal-${newLoan.id}`
-      }
-    })
-
-    // Log state machine status initialization
-    await tx.loanStateHistory.create({
-      data: {
-        loanId: newLoan.id,
-        fromStatus: 'ACTIVE',
-        toStatus: 'ACTIVE',
-        changedById: userId,
-        details: 'Initial disburse'
-      }
-    })
-
-    await tx.auditLog.create({
-      data: {
-        shopId,
-        userId,
-        action: 'CREATE_LOAN',
-        entity: 'LOAN',
-        entityId: newLoan.id,
-      }
-    })
-
-    return newLoan
-  })
-
-  revalidatePath('/dashboard/loans')
-  return { success: true, loanId: loan.id }
+    revalidatePath('/dashboard/loans')
+    return { success: true, loanId: loan.id }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
 
@@ -212,141 +232,43 @@ const onboardingSchema = z.object({
   principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0'),
 })
 
-export async function onboardCustomerWithLoan(formData: FormData) {
-  const { shopId, userId } = await getTenantContext()
+export async function onboardCustomerWithLoan(formData: FormData): Promise<ActionResult<{ customerId: string, loanId: string }>> {
+  try {
+    const { shopId, userId } = await getTenantContext()
 
-  // 1. Subscription Check (Standard Limit: 100 Customers)
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: {
-      subscriptionPlan: true,
-      _count: { select: { customers: true } }
+    const customerData = {
+      firstName: formData.get('name') as string,
+      phone: formData.get('phone') as string,
+      email: formData.get('email') as string,
+      aadhaar: formData.get('aadhaar') as string,
+      address: formData.get('address') as string,
     }
-  })
-  if (shop?.subscriptionPlan === 'STANDARD' && shop._count.customers >= 100) {
-    throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
+
+    const loanData = {
+      principalAmount: Number(formData.get('principalAmount')),
+      goldItemName: formData.get('goldItemName') as string,
+      goldWeight: Number(formData.get('goldWeight')),
+      goldPurity: formData.get('goldPurity') as string,
+      valuation: Number(formData.get('valuation')),
+    }
+    
+    const idempotencyKey = (formData.get('idempotencyKey') as string) || undefined
+
+    const result = await CustomerService.onboardCustomerWithLoan(
+      shopId,
+      userId,
+      customerData,
+      loanData,
+      idempotencyKey
+    )
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/customers')
+    revalidatePath('/dashboard/loans')
+    return { success: true, data: result }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
   }
-
-  const data = {
-    name: formData.get('name') as string,
-    phone: formData.get('phone') as string,
-    email: formData.get('email') as string,
-    aadhaar: formData.get('aadhaar') as string,
-    address: formData.get('address') as string,
-    goldItemName: formData.get('goldItemName') as string,
-    goldWeight: Number(formData.get('goldWeight')),
-    goldPurity: formData.get('goldPurity') as string,
-    valuation: Number(formData.get('valuation')),
-    principalAmount: Number(formData.get('principalAmount')),
-  }
-
-  const parsed = onboardingSchema.parse(data)
-
-  // 2. Validate Loan LTV (cannot exceed 75% default for safe operations)
-  const maxAllowedLoan = (parsed.valuation * 75) / 100
-  if (parsed.principalAmount > maxAllowedLoan) {
-    throw new Error(`Loan amount (₹${parsed.principalAmount}) exceeds maximum LTV threshold of 75% (₹${maxAllowedLoan})`)
-  }
-
-  // 3. Generate Unique Loan Number
-  const count = await prisma.loan.count({ where: { shopId } })
-  const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
-
-  const result = await prisma.$transaction(async (tx) => {
-    // A. Create Customer
-    const customer = await tx.customer.create({
-      data: {
-        shopId,
-        firstName: parsed.name,
-        lastName: '',
-        phone: parsed.phone,
-        email: parsed.email || null,
-        aadhaar: parsed.aadhaar,
-        address: parsed.address,
-      }
-    })
-
-    // Write initial KYC Version
-    await tx.customerKYCVersion.create({
-      data: {
-        customerId: customer.id,
-        version: 1,
-        firstName: parsed.name,
-        lastName: '',
-        phone: parsed.phone,
-        email: parsed.email || null,
-        aadhaar: parsed.aadhaar,
-        address: parsed.address,
-        changedById: userId,
-        reason: 'Initial registration via onboarding'
-      }
-    })
-
-    // B. Create Loan
-    const loan = await tx.loan.create({
-      data: {
-        loanNumber,
-        shopId,
-        customerId: customer.id,
-        principalAmount: parsed.principalAmount,
-        interestRate: 2.0, // default interest rate: 2% monthly
-        ltvPercentage: 75,
-        pledgedItems: {
-          create: {
-            name: parsed.goldItemName,
-            weightGrams: parsed.goldWeight,
-            purity: parsed.goldPurity,
-            valuation: parsed.valuation
-          }
-        }
-      }
-    })
-
-    // Record disbursement debit in double-entry ledger
-    await tx.ledgerEntry.create({
-      data: {
-        shopId,
-        loanId: loan.id,
-        category: 'PRINCIPAL',
-        type: 'DEBIT',
-        amount: parsed.principalAmount,
-        balanceAfter: parsed.principalAmount,
-        performedBy: userId,
-        idempotencyKey: `onboard-loan-principal-${loan.id}`
-      }
-    })
-
-    // Log state machine status initialization
-    await tx.loanStateHistory.create({
-      data: {
-        loanId: loan.id,
-        fromStatus: 'ACTIVE',
-        toStatus: 'ACTIVE',
-        changedById: userId,
-        details: 'Initial disburse via onboarding'
-      }
-    })
-
-    // C. Write Audit Log
-    await tx.auditLog.create({
-      data: {
-        shopId,
-        userId,
-        action: 'ONBOARD_CUSTOMER_WITH_LOAN',
-        entity: 'CUSTOMER',
-        entityId: customer.id,
-        details: JSON.stringify({ loanId: loan.id, loanNumber })
-      }
-    })
-
-    return { customer, loan }
-  })
-
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/customers')
-  revalidatePath('/dashboard/loans')
-
-  return { success: true, customerId: result.customer.id, loanId: result.loan.id }
 }
 
 const staffSchema = z.object({
@@ -355,220 +277,254 @@ const staffSchema = z.object({
   branchId: z.string().uuid().optional().or(z.literal('')),
 })
 
-export async function createStaffMember(formData: FormData) {
-  const { shopId, userId, role } = await getTenantContext()
+export async function createStaffMember(formData: FormData): Promise<ActionResult<{ staffId: string }>> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
 
-  // 1. Authorization: Only OWNER can add staff
-  if (role !== 'OWNER') {
-    throw new Error('Forbidden: Only shop owners can manage staff')
-  }
+    // 1. Authorization: Only OWNER can add staff
+    if (role !== 'OWNER') {
+      throw new Error('Forbidden: Only shop owners can manage staff')
+    }
 
-  // 2. Plan Check: Only ENTERPRISE shops can add staff
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: { subscriptionPlan: true }
-  })
-  if (shop?.subscriptionPlan !== 'ENTERPRISE') {
-    throw new Error('Staff management is only available on Enterprise plans')
-  }
+    // 2. Plan Check: Only ENTERPRISE shops can add staff
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { subscriptionPlan: true }
+    })
+    if (shop?.subscriptionPlan !== 'ENTERPRISE') {
+      throw new Error('Staff management is only available on Enterprise plans')
+    }
 
-  const data = {
-    name: formData.get('name') as string,
-    email: formData.get('email') as string,
-    branchId: formData.get('branchId') as string,
-  }
+    const data = {
+      name: formData.get('name') as string,
+      email: formData.get('email') as string,
+      branchId: formData.get('branchId') as string,
+    }
 
-  const parsed = staffSchema.parse(data)
+    const parsed = staffSchema.parse(data)
 
-  // 3. Check duplicate email in public.User
-  const existingUser = await prisma.user.findUnique({
-    where: { email: parsed.email },
-    select: { id: true }
-  })
-  if (existingUser) {
-    throw new Error('A user with this email address already exists')
-  }
+    // 3. Check duplicate email in public.User
+    const existingUser = await prisma.user.findUnique({
+      where: { email: parsed.email },
+      select: { id: true }
+    })
+    if (existingUser) {
+      throw new Error('A user with this email address already exists')
+    }
 
-  // 4. Create the staff member
-  const staff = await prisma.user.create({
-    data: {
+    // 4. Create User in Supabase Auth via Admin API
+    const adminAuth = createAdminClient()
+    const { data: authData, error: authError } = await adminAuth.auth.admin.createUser({
       email: parsed.email,
-      name: parsed.name,
-      role: 'STAFF',
-      shopId,
-      branchId: parsed.branchId || null,
+      password: 'Welcome@123',
+      email_confirm: true,
+    })
+    if (authError || !authData.user) {
+      throw new Error(authError?.message || 'Failed to create auth user')
     }
-  })
 
-  // 5. Write Audit Log
-  await prisma.auditLog.create({
-    data: {
-      shopId,
-      userId,
-      action: 'CREATE_STAFF_MEMBER',
-      entity: 'USER',
-      entityId: staff.id,
-      details: JSON.stringify({ email: staff.email, name: staff.name, branchId: staff.branchId })
-    }
-  })
+    const authId = authData.user.id
 
-  revalidatePath('/dashboard/staff')
-  return { success: true, staffId: staff.id }
+    // 5. Create the staff member and audit log transactionally
+    const staff = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          authId,
+          email: parsed.email,
+          name: parsed.name,
+          role: 'STAFF',
+          shopId,
+          branchId: parsed.branchId || null,
+        }
+      })
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'CREATE_STAFF_MEMBER',
+          entity: 'USER',
+          entityId: newUser.id,
+          details: JSON.stringify({ email: newUser.email, name: newUser.name, branchId: newUser.branchId })
+        }
+      })
+
+      return newUser
+    })
+
+    revalidatePath('/dashboard/staff')
+    return { success: true, data: { staffId: staff.id } }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
-export async function deleteStaffMember(staffId: string) {
-  const { shopId, userId, role } = await getTenantContext()
+export async function deleteStaffMember(staffId: string): Promise<ActionResult> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
 
-  // 1. Authorization: Only OWNER can delete staff
-  if (role !== 'OWNER') {
-    throw new Error('Forbidden: Only shop owners can manage staff')
-  }
-
-  // 2. Find and verify staff belongs to same shop
-  const staff = await prisma.user.findFirst({
-    where: { id: staffId, shopId, role: 'STAFF' },
-    select: { id: true, email: true, name: true }
-  })
-  if (!staff) {
-    throw new Error('Staff member not found')
-  }
-
-  // 3. Delete the staff member
-  await prisma.user.delete({
-    where: { id: staffId }
-  })
-
-  // 4. Write Audit Log
-  await prisma.auditLog.create({
-    data: {
-      shopId,
-      userId,
-      action: 'DELETE_STAFF_MEMBER',
-      entity: 'USER',
-      entityId: staffId,
-      details: JSON.stringify({ email: staff.email, name: staff.name })
+    if (role !== 'OWNER') {
+      throw new Error('Forbidden: Only shop owners can manage staff')
     }
-  })
 
-  revalidatePath('/dashboard/staff')
-  return { success: true }
+    const staff = await prisma.user.findFirst({
+      where: { id: staffId, shopId, role: 'STAFF' },
+      select: { id: true, authId: true, email: true, name: true }
+    })
+    if (!staff) {
+      throw new Error('Staff member not found')
+    }
+
+    const adminAuth = createAdminClient()
+
+    await prisma.$transaction(async (tx) => {
+      const deletedStaff = await tx.user.delete({
+        where: { id: staffId }
+      })
+
+      // Delete from Supabase Auth if authId exists
+      if (deletedStaff.authId) {
+        await adminAuth.auth.admin.deleteUser(deletedStaff.authId)
+      }
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'DELETE_STAFF_MEMBER',
+          entity: 'USER',
+          entityId: staffId,
+          details: JSON.stringify({ email: staff.email, name: staff.name })
+        }
+      })
+    })
+
+    revalidatePath('/dashboard/staff')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
 const branchSchema = z.object({
   name: z.string().min(3, 'Branch name must be at least 3 characters long'),
 })
 
-export async function createBranch(formData: FormData) {
-  const { shopId, userId, role } = await getTenantContext()
+export async function createBranch(formData: FormData): Promise<ActionResult<{ branchId: string }>> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
 
-  // 1. Authorization: Only OWNER can manage branches
-  if (role !== 'OWNER') {
-    throw new Error('Forbidden: Only shop owners can manage branches')
-  }
-
-  // 2. Plan Check: Only ENTERPRISE shops can manage branches
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: { subscriptionPlan: true }
-  })
-  if (shop?.subscriptionPlan !== 'ENTERPRISE') {
-    throw new Error('Branch management is only available on Enterprise plans')
-  }
-
-  const data = {
-    name: formData.get('name') as string,
-  }
-
-  const parsed = branchSchema.parse(data)
-
-  // 3. Check duplicate branch name in shop
-  const existingBranch = await prisma.branch.findFirst({
-    where: { shopId, name: parsed.name },
-    select: { id: true }
-  })
-  if (existingBranch) {
-    throw new Error('A branch with this name already exists in your shop')
-  }
-
-  // 4. Create branch
-  const branch = await prisma.branch.create({
-    data: {
-      name: parsed.name,
-      shopId,
+    if (role !== 'OWNER') {
+      throw new Error('Forbidden: Only shop owners can manage branches')
     }
-  })
 
-  // 5. Write Audit Log
-  await prisma.auditLog.create({
-    data: {
-      shopId,
-      userId,
-      action: 'CREATE_BRANCH',
-      entity: 'BRANCH',
-      entityId: branch.id,
-      details: JSON.stringify({ name: branch.name })
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { subscriptionPlan: true }
+    })
+    if (shop?.subscriptionPlan !== 'ENTERPRISE') {
+      throw new Error('Branch management is only available on Enterprise plans')
     }
-  })
 
-  revalidatePath('/dashboard/branches')
-  revalidatePath('/dashboard/staff')
-  return { success: true, branchId: branch.id }
+    const data = {
+      name: formData.get('name') as string,
+    }
+
+    const parsed = branchSchema.parse(data)
+
+    const existingBranch = await prisma.branch.findFirst({
+      where: { shopId, name: parsed.name },
+      select: { id: true }
+    })
+    if (existingBranch) {
+      throw new Error('A branch with this name already exists in your shop')
+    }
+
+    const branch = await prisma.$transaction(async (tx) => {
+      const newBranch = await tx.branch.create({
+        data: {
+          name: parsed.name,
+          shopId,
+        }
+      })
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'CREATE_BRANCH',
+          entity: 'BRANCH',
+          entityId: newBranch.id,
+          details: JSON.stringify({ name: newBranch.name })
+        }
+      })
+
+      return newBranch
+    })
+
+    revalidatePath('/dashboard/branches')
+    revalidatePath('/dashboard/staff')
+    return { success: true, data: { branchId: branch.id } }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
-export async function deleteBranch(branchId: string) {
-  const { shopId, userId, role } = await getTenantContext()
+export async function deleteBranch(branchId: string): Promise<ActionResult> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
 
-  // 1. Authorization: Only OWNER can manage branches
-  if (role !== 'OWNER') {
-    throw new Error('Forbidden: Only shop owners can manage branches')
-  }
+    if (role !== 'OWNER') {
+      throw new Error('Forbidden: Only shop owners can manage branches')
+    }
 
-  // 2. Find and verify branch belongs to same shop
-  const branch = await prisma.branch.findFirst({
-    where: { id: branchId, shopId },
-    select: {
-      id: true,
-      name: true,
-      _count: {
-        select: { users: true, customers: true, loans: true }
+    const branch = await prisma.branch.findFirst({
+      where: { id: branchId, shopId },
+      select: {
+        id: true,
+        name: true,
+        _count: {
+          select: { users: true, customers: true, loans: true }
+        }
       }
+    })
+    if (!branch) {
+      throw new Error('Branch not found')
     }
-  })
-  if (!branch) {
-    throw new Error('Branch not found')
-  }
 
-  // 3. Safety Check: Cannot delete if it has active links (cascade protection)
-  if (branch._count.users > 0) {
-    throw new Error('Cannot delete branch: Active staff members are still assigned to it.')
-  }
-  if (branch._count.customers > 0) {
-    throw new Error('Cannot delete branch: Customers are still associated with it.')
-  }
-  if (branch._count.loans > 0) {
-    throw new Error('Cannot delete branch: Active loans are still registered at it.')
-  }
-
-  // 4. Delete branch
-  await prisma.branch.delete({
-    where: { id: branchId }
-  })
-
-  // 5. Write Audit Log
-  await prisma.auditLog.create({
-    data: {
-      shopId,
-      userId,
-      action: 'DELETE_BRANCH',
-      entity: 'BRANCH',
-      entityId: branchId,
-      details: JSON.stringify({ name: branch.name })
+    if (branch._count.users > 0) {
+      throw new Error('Cannot delete branch: Active staff members are still assigned to it.')
     }
-  })
+    if (branch._count.customers > 0) {
+      throw new Error('Cannot delete branch: Customers are still associated with it.')
+    }
+    if (branch._count.loans > 0) {
+      throw new Error('Cannot delete branch: Active loans are still registered at it.')
+    }
 
-  revalidatePath('/dashboard/branches')
-  revalidatePath('/dashboard/staff')
-  return { success: true }
+    await prisma.$transaction(async (tx) => {
+      await tx.branch.delete({
+        where: { id: branchId }
+      })
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'DELETE_BRANCH',
+          entity: 'BRANCH',
+          entityId: branchId,
+          details: JSON.stringify({ name: branch.name })
+        }
+      })
+    })
+
+    revalidatePath('/dashboard/branches')
+    revalidatePath('/dashboard/staff')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -586,190 +542,56 @@ function validateStateTransition(from: string, to: string) {
   }
 }
 
-export async function repayLoan(formData: FormData) {
-  const { shopId, userId } = await getTenantContext()
-  
-  const loanId = formData.get('loanId') as string
-  const amountPaid = Number(formData.get('amountPaid'))
-  const paymentMode = formData.get('paymentMode') as 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
-  const referenceId = formData.get('referenceId') as string | null
-
-  if (!loanId || isNaN(amountPaid) || amountPaid <= 0) {
-    throw new Error('Invalid payment details')
-  }
-
-  // Execute payment recording and loan updates inside a locked interactive transaction
-  const result = await prisma.$transaction(async (tx) => {
-    // 1. Perform a SELECT FOR UPDATE to pessimistically lock the loan row
-    await tx.$queryRaw`SELECT id FROM "Loan" WHERE id = ${loanId} FOR UPDATE`
-
-    // 2. Fetch the locked loan with all payments inside the transaction scope
-    const loan = await tx.loan.findFirst({
-      where: { id: loanId, shopId },
-      include: { payments: true }
-    })
-
-    if (!loan) throw new Error('Loan not found or unauthorized')
-    if (loan.status === 'CLOSED') throw new Error('Loan is already closed')
-
-    // 3. Calculate current balances dynamically
-    const balances = calculateLoanBalances(loan as any)
+export async function repayLoan(formData: FormData): Promise<ActionResult<{ paymentId: string }>> {
+  try {
+    const { shopId, userId } = await getTenantContext()
     
-    // Allocate amountPaid to interest first, then principal
-    const interestPaid = Math.min(amountPaid, balances.interestDue)
-    const rawPrincipalPaid = Math.max(0, amountPaid - interestPaid)
-    const principalPaid = Math.min(rawPrincipalPaid, balances.outstandingPrincipal)
-    const actualAmountPaid = interestPaid + principalPaid
+    const loanId = formData.get('loanId') as string
+    const amountPaid = Number(formData.get('amountPaid'))
+    const paymentMode = formData.get('paymentMode') as 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
+    const referenceId = formData.get('referenceId') as string | null
+    const currentVersion = Number(formData.get('currentVersion') || 0)
 
-    // 4. Record the repayment transaction
-    const newPayment = await tx.payment.create({
-      data: {
-        loanId,
-        amountPaid: actualAmountPaid,
-        principalPaid,
-        interestPaid,
-        paymentMode,
-        referenceId: referenceId || null,
-        paymentDate: new Date()
-      }
-    })
-
-    // 5. Update loan status and close it if fully settled
-    const finalOutstandingPrincipal = balances.outstandingPrincipal - principalPaid
-    const isFullyPaid = finalOutstandingPrincipal <= 0.01 // handle minor differences
-    const targetStatus = isFullyPaid ? 'CLOSED' : loan.status
-
-    if (isFullyPaid) {
-      validateStateTransition(loan.status, 'CLOSED')
+    if (!loanId || isNaN(amountPaid) || amountPaid <= 0) {
+      throw new Error('Invalid payment details')
     }
 
-    await tx.loan.update({
-      where: { id: loanId },
-      data: {
-        status: targetStatus,
-        endDate: isFullyPaid ? new Date() : loan.endDate
-      }
-    })
+    const result = await LoanService.repayLoan(
+      shopId,
+      userId,
+      loanId,
+      amountPaid,
+      paymentMode,
+      referenceId,
+      currentVersion
+    )
 
-    // Write to double-entry ledger entries
-    if (interestPaid > 0) {
-      await tx.ledgerEntry.create({
-        data: {
-          shopId,
-          loanId,
-          paymentId: newPayment.id,
-          category: 'INTEREST',
-          type: 'CREDIT',
-          amount: interestPaid,
-          balanceAfter: Math.max(0, balances.interestDue - interestPaid),
-          performedBy: userId,
-          idempotencyKey: `repay-interest-${newPayment.id}`
-        }
-      })
-    }
+    revalidatePath('/dashboard/loans')
+    revalidatePath(`/dashboard/loans/${loanId}`)
+    revalidatePath(`/dashboard/customers/${result.customerId}`)
+    revalidatePath('/dashboard/reports')
 
-    if (principalPaid > 0) {
-      await tx.ledgerEntry.create({
-        data: {
-          shopId,
-          loanId,
-          paymentId: newPayment.id,
-          category: 'PRINCIPAL',
-          type: 'CREDIT',
-          amount: principalPaid,
-          balanceAfter: finalOutstandingPrincipal,
-          performedBy: userId,
-          idempotencyKey: `repay-principal-${newPayment.id}`
-        }
-      })
-    }
-
-    if (isFullyPaid) {
-      await tx.loanStateHistory.create({
-        data: {
-          loanId,
-          fromStatus: loan.status,
-          toStatus: 'CLOSED',
-          changedById: userId,
-          details: 'Loan fully paid off'
-        }
-      })
-    }
-
-    // 6. Write to Audit Trail
-    await tx.auditLog.create({
-      data: {
-        shopId,
-        userId,
-        action: 'RECORD_REPAYMENT',
-        entity: 'PAYMENT',
-        entityId: newPayment.id,
-        details: JSON.stringify({
-          loanId,
-          amountPaid: actualAmountPaid,
-          principalPaid,
-          interestPaid,
-          isFullyPaid
-        })
-      }
-    })
-
-    return { paymentId: newPayment.id, isFullyPaid, customerId: loan.customerId }
-  })
-
-  revalidatePath('/dashboard/loans')
-  revalidatePath(`/dashboard/loans/${loanId}`)
-  revalidatePath(`/dashboard/customers/${result.customerId}`)
-  revalidatePath('/dashboard/reports')
-
-  return { success: true, ...result }
+    return { success: true, data: { paymentId: result.paymentId } }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
-export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED') {
-  const { shopId, userId } = await getTenantContext()
+export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED', currentVersion: number = 0): Promise<ActionResult> {
+  try {
+    const { shopId, userId } = await getTenantContext()
 
-  const loan = await prisma.loan.findFirst({
-    where: { id: loanId, shopId },
-    select: { id: true, customerId: true, status: true }
-  })
-  if (!loan) throw new Error('Loan not found')
+    const result = await LoanService.updateStatus(shopId, userId, loanId, status, currentVersion)
 
-  validateStateTransition(loan.status, status)
+    revalidatePath('/dashboard/loans')
+    revalidatePath(`/dashboard/loans/${loanId}`)
+    revalidatePath(`/dashboard/customers/${result.customerId}`)
+    revalidatePath('/dashboard/reports')
 
-  await prisma.$transaction(async (tx) => {
-    await tx.loan.update({
-      where: { id: loanId },
-      data: { status }
-    })
-
-    await tx.loanStateHistory.create({
-      data: {
-        loanId,
-        fromStatus: loan.status,
-        toStatus: status,
-        changedById: userId,
-        details: 'Manual status update via dashboard'
-      }
-    })
-
-    await tx.auditLog.create({
-      data: {
-        shopId,
-        userId,
-        action: 'UPDATE_LOAN_STATUS',
-        entity: 'LOAN',
-        entityId: loanId,
-        details: JSON.stringify({ status })
-      }
-    })
-  })
-
-  revalidatePath('/dashboard/loans')
-  revalidatePath(`/dashboard/loans/${loanId}`)
-  revalidatePath(`/dashboard/customers/${loan.customerId}`)
-  revalidatePath('/dashboard/reports')
-
-  return { success: true }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
 }
 
 

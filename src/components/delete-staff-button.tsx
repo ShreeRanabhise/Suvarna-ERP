@@ -11,9 +11,13 @@ export default function DeleteStaffButton({ staffId, staffName }: { staffId: str
     if (confirm(`Are you sure you want to remove ${staffName} as a staff member?`)) {
       startTransition(async () => {
         try {
-          await deleteStaffMember(staffId)
-        } catch (err: any) {
-          alert(err.message || 'Failed to delete staff member')
+          const res = await deleteStaffMember(staffId)
+          if (!res.success) {
+            alert(res.error)
+            return
+          }
+        } catch (error: any) {
+          alert(error.message || 'Something went wrong')
         }
       })
     }

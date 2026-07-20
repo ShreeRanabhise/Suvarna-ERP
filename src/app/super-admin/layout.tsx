@@ -19,7 +19,7 @@ export default async function SuperAdminLayout({
 
   // Verify Super Admin status in database
   const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
+    where: { authId: user.id }
   })
 
   if (!dbUser || dbUser.role !== 'SUPER_ADMIN') {

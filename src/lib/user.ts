@@ -8,7 +8,7 @@ export const getCachedUser = cache(async () => {
   if (!user) return null
 
   const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! },
+    where: { authId: user.id },
     select: {
       id: true,
       email: true,

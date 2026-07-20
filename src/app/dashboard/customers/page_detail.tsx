@@ -14,7 +14,7 @@ export default async function CustomerDetailPage(props: { params: Promise<{ id: 
   if (!user) redirect('/login')
 
   const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
+    where: { authId: user.id }
   })
   if (!dbUser || !dbUser.shopId) redirect('/login')
 

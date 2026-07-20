@@ -8,6 +8,12 @@ export default function OnboardCustomerDialog() {
   const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState('')
+
+  const openDialog = () => {
+    setIdempotencyKey(crypto.randomUUID())
+    setIsOpen(true)
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -17,9 +23,11 @@ export default function OnboardCustomerDialog() {
     const formData = new FormData(event.currentTarget)
     try {
       const res = await onboardCustomerWithLoan(formData)
-      if (res.success) {
-        setIsOpen(false)
+      if (!res.success) {
+        setError(res.error)
+        return
       }
+      setIsOpen(false)
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
     } finally {
@@ -30,7 +38,7 @@ export default function OnboardCustomerDialog() {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={openDialog}
         className="flex items-center gap-2 bg-primary text-white hover:gold-gradient-hover px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition"
       >
         <UserCheck className="h-4.5 w-4.5" />
@@ -53,6 +61,8 @@ export default function OnboardCustomerDialog() {
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-5">
+              <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+              
               {/* SECTION 1: Customer Profile */}
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
                 1. Customer Profile Details

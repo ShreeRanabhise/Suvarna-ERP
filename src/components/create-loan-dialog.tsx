@@ -12,6 +12,13 @@ export default function CreateLoanDialog({
   const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState('')
+
+  // Generate a new idempotency key every time the dialog opens
+  const openDialog = () => {
+    setIdempotencyKey(crypto.randomUUID())
+    setIsOpen(true)
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -21,9 +28,11 @@ export default function CreateLoanDialog({
     const formData = new FormData(event.currentTarget)
     try {
       const res = await createLoan(formData)
-      if (res.success) {
-        setIsOpen(false)
+      if (!res.success) {
+        setError(res.error)
+        return
       }
+      setIsOpen(false)
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
     } finally {
@@ -34,7 +43,7 @@ export default function CreateLoanDialog({
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={openDialog}
         className="flex items-center gap-2 bg-primary text-white hover:gold-gradient-hover px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition"
       >
         <Landmark className="h-4 w-4" />
@@ -57,6 +66,8 @@ export default function CreateLoanDialog({
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+              
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer Reference ID</label>
                 <input

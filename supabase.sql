@@ -1,63 +1,87 @@
--- Supabase Setup & RLS Policies for Suvarna GoldLoan ERP
+-- Strict Row Level Security (RLS) Policies for Suvarna ERP
 
--- 1. Enable RLS on all tables
+-- Enable RLS on all core tables
 ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Shop" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Branch" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Customer" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Loan" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "PledgedItem" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Payment" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "NotificationLog" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "LedgerEntry" ENABLE ROW LEVEL SECURITY;
 
--- 2. Create helper functions to get current user's shop_id and role
-CREATE OR REPLACE FUNCTION get_user_shop_id() RETURNS text AS $$
-  SELECT shopId FROM "User" WHERE email = (auth.jwt()->>'email')::text LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER;
+-- 1. User Table Policy (Users can only see users in their own shop)
+CREATE POLICY "Users can view users in their shop"
+ON "User"
+FOR SELECT
+USING (
+  shopId IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);
 
-CREATE OR REPLACE FUNCTION get_user_role() RETURNS text AS $$
-  SELECT role FROM "User" WHERE email = (auth.jwt()->>'email')::text LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER;
+CREATE POLICY "Users can update their own profile"
+ON "User"
+FOR UPDATE
+USING (authId = auth.uid()::text);
 
--- 3. RLS Policies
+-- 2. Shop Table Policy
+CREATE POLICY "Users can view their own shop"
+ON "Shop"
+FOR SELECT
+USING (
+  id IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);
 
--- Shop: Super Admins can see/manage all, Owners can see their own
-CREATE POLICY "Super Admins can manage all shops" ON "Shop"
-  USING (get_user_role() = 'SUPER_ADMIN');
+-- 3. Branch Table Policy
+CREATE POLICY "Users can view branches in their shop"
+ON "Branch"
+FOR SELECT
+USING (
+  shopId IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);
 
-CREATE POLICY "Owners can view own shop" ON "Shop"
-  FOR SELECT USING (id = get_user_shop_id() AND get_user_role() = 'OWNER');
+-- 4. Customer Table Policy
+CREATE POLICY "Users can view and edit customers in their shop"
+ON "Customer"
+FOR ALL
+USING (
+  shopId IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);
 
--- Customer: Tenant isolation
-CREATE POLICY "Users can manage customers in their shop" ON "Customer"
-  USING (shopId = get_user_shop_id());
+-- 5. Loan Table Policy
+CREATE POLICY "Users can view and edit loans in their shop"
+ON "Loan"
+FOR ALL
+USING (
+  shopId IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);
 
--- Loan: Tenant isolation
-CREATE POLICY "Users can manage loans in their shop" ON "Loan"
-  USING (shopId = get_user_shop_id());
+-- 6. Payment Policy
+CREATE POLICY "Users can view and edit payments in their shop"
+ON "Payment"
+FOR ALL
+USING (
+  loanId IN (
+    SELECT id FROM "Loan" WHERE shopId IN (
+      SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+    )
+  )
+);
 
--- PledgedItem: Tenant isolation via Loan
-CREATE POLICY "Users can manage pledged items in their shop" ON "PledgedItem"
-  USING (EXISTS (SELECT 1 FROM "Loan" l WHERE l.id = "PledgedItem"."loanId" AND l.shopId = get_user_shop_id()));
-
--- Payment: Tenant isolation via Loan
-CREATE POLICY "Users can manage payments in their shop" ON "Payment"
-  USING (EXISTS (SELECT 1 FROM "Loan" l WHERE l.id = "Payment"."loanId" AND l.shopId = get_user_shop_id()));
-
--- AuditLog: Super Admins can see all, Owners can see their shop's logs
-CREATE POLICY "Super Admins can view all audit logs" ON "AuditLog"
-  FOR SELECT USING (get_user_role() = 'SUPER_ADMIN');
-
-CREATE POLICY "Owners can view own shop audit logs" ON "AuditLog"
-  FOR SELECT USING (shopId = get_user_shop_id() AND get_user_role() = 'OWNER');
-
--- 4. Storage Bucket Setup for Documents
-INSERT INTO storage.buckets (id, name, public) VALUES ('kyc-documents', 'kyc-documents', false);
-
--- Storage RLS
-CREATE POLICY "Tenant can upload documents" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'kyc-documents' AND (auth.uid() IS NOT NULL));
-
-CREATE POLICY "Tenant can view own documents" ON storage.objects
-  FOR SELECT USING (bucket_id = 'kyc-documents' AND (auth.uid() IS NOT NULL)); -- In a real app, restrict by path tenant_id/
+-- 7. LedgerEntry Policy
+CREATE POLICY "Users can view ledger entries in their shop"
+ON "LedgerEntry"
+FOR SELECT
+USING (
+  shopId IN (
+    SELECT shopId FROM "User" WHERE authId = auth.uid()::text
+  )
+);

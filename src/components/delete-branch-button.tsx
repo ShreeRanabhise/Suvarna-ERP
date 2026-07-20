@@ -11,7 +11,11 @@ export default function DeleteBranchButton({ branchId, branchName }: { branchId:
     if (confirm(`Are you sure you want to remove the branch "${branchName}"?`)) {
       startTransition(async () => {
         try {
-          await deleteBranch(branchId)
+          const res = await deleteBranch(branchId)
+          if (!res.success) {
+            alert(res.error)
+            return
+          }
         } catch (err: any) {
           alert(err.message || 'Failed to delete branch')
         }
