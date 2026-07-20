@@ -9,7 +9,7 @@ import { ArrowRight, Landmark } from "lucide-react"
 export default async function LoansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string; status?: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
@@ -37,11 +37,13 @@ export default async function LoansPage({
       { loanNumber: { contains: query, mode: 'insensitive' } },
       {
         customer: {
-          OR: [
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
-            { phone: { contains: query, mode: 'insensitive' } },
-          ]
+          is: {
+            OR: [
+              { firstName: { contains: query, mode: 'insensitive' } },
+              { lastName: { contains: query, mode: 'insensitive' } },
+              { phone: { contains: query, mode: 'insensitive' } },
+            ]
+          }
         }
       }
     ]

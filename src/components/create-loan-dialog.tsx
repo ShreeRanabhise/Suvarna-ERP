@@ -75,6 +75,8 @@ export default function CreateLoanDialog({
                     name="principalAmount"
                     type="number"
                     required
+                    min="0.01"
+                    step="0.01"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono font-bold"
                   />
                 </div>
@@ -84,6 +86,8 @@ export default function CreateLoanDialog({
                     name="interestRate"
                     type="number"
                     step="0.01"
+                    min="0.1"
+                    max="100"
                     required
                     defaultValue="2.0"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
@@ -98,6 +102,8 @@ export default function CreateLoanDialog({
                     name="ltvPercentage"
                     type="number"
                     required
+                    min="0.1"
+                    max="100"
                     defaultValue="75"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                   />
@@ -120,6 +126,7 @@ export default function CreateLoanDialog({
                     name="weightGrams"
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                   />
@@ -141,6 +148,8 @@ export default function CreateLoanDialog({
                   name="valuation"
                   type="number"
                   required
+                  min="0.01"
+                  step="0.01"
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono font-bold"
                 />
               </div>

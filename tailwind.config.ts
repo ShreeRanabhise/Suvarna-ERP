@@ -60,6 +60,10 @@ const config: Config = {
             sans: ['var(--font-inter)'],
             heading: ['var(--font-playfair)'],
             mono: ['var(--font-jetbrains-mono)'],
+        },
+        transitionTimingFunction: {
+            'luxury-bounce': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            'luxury-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',
         }
   	}
   },

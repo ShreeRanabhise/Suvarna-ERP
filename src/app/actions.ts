@@ -8,22 +8,22 @@ import { calculateLoanBalances } from '@/lib/loan-utils'
 
 // Validation Schemas
 const customerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  phone: z.string().min(10, 'Valid phone number required'),
-  aadhaar: z.string().min(12, '12-digit Aadhaar required').max(12),
-  address: z.string().min(1, 'Address is required'),
+  firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
+  lastName: z.string().min(1, 'Last name is required').regex(/^[a-zA-Z\s]*$/, 'Only letters and spaces allowed in name'),
+  phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
+  aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
+  address: z.string().min(5, 'Please provide a complete address'),
 })
 
 const loanSchema = z.object({
   customerId: z.string().uuid(),
-  principalAmount: z.number().positive(),
-  interestRate: z.number().positive(),
-  ltvPercentage: z.number().positive().max(100),
-  itemName: z.string(),
-  weightGrams: z.number().positive(),
-  purity: z.string(),
-  valuation: z.number().positive(),
+  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0'),
+  interestRate: z.number().min(0.1, 'Interest rate must be at least 0.1%'),
+  ltvPercentage: z.number().min(0.1, 'LTV must be > 0').max(100, 'LTV cannot exceed 100%'),
+  itemName: z.string().min(1, 'Item name is required'),
+  weightGrams: z.number().min(0.01, 'Weight must be greater than 0'),
+  purity: z.string().min(1, 'Purity is required'),
+  valuation: z.number().min(0.01, 'Valuation must be greater than 0'),
 })
 
 
@@ -200,16 +200,16 @@ export async function createLoan(formData: FormData) {
 
 
 const onboardingSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(10, 'Valid phone number required'),
+  name: z.string().min(1, 'Name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
+  phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  aadhaar: z.string().min(12, '12-digit Aadhaar required').max(12),
-  address: z.string().min(1, 'Address is required'),
+  aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
+  address: z.string().min(5, 'Please provide a complete address'),
   goldItemName: z.string().min(1, 'Gold item name is required'),
-  goldWeight: z.number().positive('Gold weight must be positive'),
+  goldWeight: z.number().min(0.01, 'Weight must be greater than 0'),
   goldPurity: z.string().min(1, 'Purity is required'),
-  valuation: z.number().positive('Valuation must be positive'),
-  principalAmount: z.number().positive('Loan amount must be positive'),
+  valuation: z.number().min(0.01, 'Valuation must be greater than 0'),
+  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0'),
 })
 
 export async function onboardCustomerWithLoan(formData: FormData) {
@@ -350,7 +350,7 @@ export async function onboardCustomerWithLoan(formData: FormData) {
 }
 
 const staffSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
   email: z.string().email('Invalid email address'),
   branchId: z.string().uuid().optional().or(z.literal('')),
 })
@@ -455,7 +455,7 @@ export async function deleteStaffMember(staffId: string) {
 }
 
 const branchSchema = z.object({
-  name: z.string().min(1, 'Branch name is required'),
+  name: z.string().min(3, 'Branch name must be at least 3 characters long'),
 })
 
 export async function createBranch(formData: FormData) {

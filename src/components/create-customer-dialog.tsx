@@ -59,6 +59,8 @@ export default function CreateCustomerDialog() {
                   <input
                     name="firstName"
                     required
+                    pattern="[a-zA-Z\s]+"
+                    title="Only letters and spaces allowed"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                   />
                 </div>
@@ -68,6 +70,8 @@ export default function CreateCustomerDialog() {
                   <input
                     name="lastName"
                     required
+                    pattern="[a-zA-Z\s]*"
+                    title="Only letters and spaces allowed"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                   />
                 </div>
@@ -79,6 +83,8 @@ export default function CreateCustomerDialog() {
                   name="phone"
                   required
                   type="tel"
+                  pattern="[0-9]{10}"
+                  title="Must be a valid 10-digit phone number"
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                 />
               </div>
@@ -89,6 +95,8 @@ export default function CreateCustomerDialog() {
                   name="aadhaar"
                   required
                   maxLength={12}
+                  pattern="[0-9]{12}"
+                  title="Must be a valid 12-digit Aadhaar number"
                   placeholder="123456789012"
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                 />
@@ -99,6 +107,7 @@ export default function CreateCustomerDialog() {
                 <textarea
                   name="address"
                   required
+                  minLength={5}
                   rows={2}
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                 />

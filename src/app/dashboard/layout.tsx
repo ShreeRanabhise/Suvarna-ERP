@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   })
 
   return (
-    <div className="flex min-h-screen w-full bg-[#F8F9FB]">
+    <div className="flex min-h-screen w-full bg-background selection:bg-primary/20">
       <SidebarNav 
         userEmail={dbUser.email} 
         userRole={dbUser.role} 
@@ -37,26 +37,27 @@ export default async function DashboardLayout({
       {/* Content wrapper */}
       <div className="flex flex-col flex-1 sm:pl-64 min-h-screen">
         {/* Glassmorphism Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white/75 backdrop-blur-md px-6 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-xl px-8 shadow-sm transition-all duration-300">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-primary bg-primary/10 px-2 py-0.5 rounded">
-              ERP WORKSPACE
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-md ring-1 ring-primary/20">
+              ERP Workspace
             </span>
-            <span className="text-slate-300">/</span>
-            <span className="text-sm font-semibold text-slate-700">Dashboard</span>
+            <span className="text-muted-foreground/40 font-light">/</span>
+            <span className="text-sm font-semibold text-foreground tracking-tight">Dashboard</span>
           </div>
           
           {/* Date Widget & Profile */}
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/50">
-              <Calendar className="h-3.5 w-3.5 text-primary" />
+          <div className="flex items-center gap-5">
+            <div className="hidden md:flex items-center gap-2.5 text-xs font-medium text-muted-foreground bg-card px-4 py-2 rounded-full border border-border shadow-sm">
+              <Calendar className="h-4 w-4 text-primary" />
               <span>{currentDate}</span>
             </div>
             
-            <div className="h-px w-4 bg-slate-200 hidden md:block" />
+            <div className="h-4 w-px bg-border hidden md:block" />
             
-            <div className="text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-xl shadow-sm uppercase">
+            <div className="text-xs font-bold bg-foreground text-background px-4 py-2 rounded-full shadow-md uppercase tracking-wider flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary gold-glow"></span>
               {dbUser.role} Mode
             </div>
           </div>

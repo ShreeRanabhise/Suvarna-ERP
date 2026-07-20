@@ -64,6 +64,8 @@ export default function OnboardCustomerDialog() {
                   <input
                     name="name"
                     required
+                    pattern="[a-zA-Z\s]+"
+                    title="Only letters and spaces allowed"
                     placeholder="e.g. Amit Sharma"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                   />
@@ -74,6 +76,8 @@ export default function OnboardCustomerDialog() {
                     name="phone"
                     required
                     type="tel"
+                    pattern="[0-9]{10}"
+                    title="Must be a valid 10-digit phone number"
                     placeholder="e.g. 9876543210"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                   />
@@ -87,6 +91,8 @@ export default function OnboardCustomerDialog() {
                     name="aadhaar"
                     required
                     maxLength={12}
+                    pattern="[0-9]{12}"
+                    title="Must be a valid 12-digit Aadhaar number"
                     placeholder="123456789012"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                   />
@@ -107,6 +113,7 @@ export default function OnboardCustomerDialog() {
                 <textarea
                   name="address"
                   required
+                  minLength={5}
                   rows={2}
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                 />
@@ -146,6 +153,7 @@ export default function OnboardCustomerDialog() {
                     name="goldWeight"
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono"
                   />
@@ -156,6 +164,8 @@ export default function OnboardCustomerDialog() {
                     name="valuation"
                     type="number"
                     required
+                    min="0.01"
+                    step="0.01"
                     className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono font-bold"
                   />
                 </div>
@@ -167,6 +177,8 @@ export default function OnboardCustomerDialog() {
                   name="principalAmount"
                   type="number"
                   required
+                  min="0.01"
+                  step="0.01"
                   placeholder="Max 75% LTV of gold valuation"
                   className="rounded-xl px-3 py-2 border border-primary/30 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition font-mono font-extrabold"
                 />

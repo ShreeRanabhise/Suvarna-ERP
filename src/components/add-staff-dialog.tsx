@@ -63,6 +63,8 @@ export default function AddStaffDialog({ branches }: { branches: Branch[] }) {
                 <input
                   name="name"
                   required
+                  pattern="[a-zA-Z\s]+"
+                  title="Only letters and spaces allowed"
                   placeholder="e.g. Amit Sharma"
                   className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
                 />

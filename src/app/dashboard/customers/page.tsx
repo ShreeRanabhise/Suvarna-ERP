@@ -9,7 +9,7 @@ import { ArrowRight, User } from "lucide-react"
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')

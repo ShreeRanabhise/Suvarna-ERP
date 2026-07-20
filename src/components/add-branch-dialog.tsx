@@ -31,35 +31,38 @@ export default function AddBranchDialog() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-primary text-white hover:gold-gradient-hover px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition"
+        className="flex items-center gap-2 gold-gradient text-primary-foreground hover:gold-gradient-hover px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
       >
-        <Building className="h-4 w-4" />
+        <Building className="h-4.5 w-4.5" />
         <span>Add Branch</span>
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-w-md w-full mx-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl max-w-md w-full mx-4 relative animate-in zoom-in-95 duration-300">
             <button 
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"
+              className="absolute top-5 right-5 text-muted-foreground hover:text-foreground bg-secondary/5 hover:bg-secondary/10 p-2 rounded-full transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
 
-            <h3 className="text-lg font-bold font-heading mb-4 text-slate-800 flex items-center gap-2">
-              <Building className="h-5 w-5 text-primary" />
+            <h3 className="text-xl font-bold font-heading mb-6 text-foreground flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-xl">
+                <Building className="h-5 w-5 text-primary" />
+              </div>
               <span>Create New Branch</span>
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Branch Identifier Name *</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Branch Identifier Name *</label>
                 <input
                   name="name"
                   required
+                  minLength={3}
                   placeholder="e.g. South Mumbai Branch"
-                  className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
+                  className="rounded-xl px-4 py-3 border border-border focus:border-primary focus:ring-4 focus:ring-primary/10 bg-background text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
 
@@ -69,18 +72,18 @@ export default function AddBranchDialog() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 mt-6">
+              <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-600 transition"
+                  className="px-5 py-2.5 border border-border hover:bg-secondary/5 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-primary text-white hover:gold-gradient-hover rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50"
+                  className="px-5 py-2.5 gold-gradient hover:gold-gradient-hover text-primary-foreground rounded-xl text-sm font-bold shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   {loading ? 'Adding...' : 'Add Branch'}
                 </button>

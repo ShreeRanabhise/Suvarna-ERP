@@ -119,94 +119,96 @@ export default async function DashboardPage() {
   })
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Welcome Banner Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#0B0F19] text-white p-6 md:p-8 border border-slate-900 shadow-md">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+      <div className="relative overflow-hidden rounded-3xl bg-secondary text-secondary-foreground p-8 md:p-10 border border-secondary-foreground/10 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none -mr-32 -mt-32 transition-transform duration-1000 ease-out hover:scale-110" />
         <div className="relative z-10 max-w-xl">
-          <span className="text-[10px] text-primary uppercase font-bold tracking-widest bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
+          <span className="text-[10px] text-primary uppercase font-bold tracking-widest bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 backdrop-blur-md">
             Gold Loan SaaS
           </span>
-          <h2 className="text-2xl md:text-3xl font-heading text-white font-semibold mt-4">
+          <h2 className="text-3xl md:text-4xl font-heading text-secondary-foreground font-semibold mt-6 tracking-tight">
             Welcome back to your workspace
           </h2>
-          <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+          <p className="text-secondary-foreground/60 text-sm mt-3 leading-relaxed font-light">
             Monitor and manage active gold ledger valuations, customer collateral parameters, and real-time payments allocations in one unified platform.
           </p>
         </div>
       </div>
       
       {/* KPI Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Card 1 */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Customers</span>
-            <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-              <Users className="h-4 w-4" />
+        <div className="luxury-card rounded-3xl p-7 flex flex-col justify-between group">
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Total Customers</span>
+            <div className="h-9 w-9 rounded-xl bg-secondary/5 group-hover:bg-primary/10 transition-colors duration-500 flex items-center justify-center text-secondary/40 group-hover:text-primary">
+              <Users className="h-4.5 w-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold font-mono text-slate-900 leading-none">{totalCustomers}</div>
-            <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+            <div className="text-4xl font-extrabold font-mono text-foreground tracking-tighter">{totalCustomers}</div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 font-medium">
               Active in database
             </p>
           </div>
         </div>
 
         {/* Card 2 */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Loans</span>
-            <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-              <Banknote className="h-4 w-4" />
+        <div className="luxury-card rounded-3xl p-7 flex flex-col justify-between group">
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Active Loans</span>
+            <div className="h-9 w-9 rounded-xl bg-secondary/5 group-hover:bg-primary/10 transition-colors duration-500 flex items-center justify-center text-secondary/40 group-hover:text-primary">
+              <Banknote className="h-4.5 w-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold font-mono text-slate-900 leading-none">{activeLoansCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Currently outstanding</p>
+            <div className="text-4xl font-extrabold font-mono text-foreground tracking-tighter">{activeLoansCount}</div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 font-medium">Currently outstanding</p>
           </div>
         </div>
 
         {/* Card 3 */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outstanding Balance</span>
-            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <TrendingUp className="h-4 w-4" />
+        <div className="luxury-card rounded-3xl p-7 flex flex-col justify-between group relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 w-32 h-32 bg-primary/5 rounded-tl-full blur-2xl transition-transform duration-700 group-hover:scale-150"></div>
+          <div className="relative z-10 flex items-center justify-between pb-3">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Outstanding Balance</span>
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shadow-primary/20">
+              <TrendingUp className="h-4.5 w-4.5" />
             </div>
           </div>
-          <div className="mt-4">
-            <div className="text-3xl font-extrabold font-mono text-primary leading-none">{formatINR(outstandingBalance)}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Active capital in market</p>
+          <div className="relative z-10 mt-4">
+            <div className="text-4xl font-extrabold font-mono text-primary tracking-tighter">{formatINR(outstandingBalance)}</div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 font-medium">Active capital in market</p>
           </div>
         </div>
 
         {/* Card 4 */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gold Reserved</span>
-            <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-              <Scale className="h-4 w-4" />
+        <div className="luxury-card rounded-3xl p-7 flex flex-col justify-between group">
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Gold Reserved</span>
+            <div className="h-9 w-9 rounded-xl bg-secondary/5 group-hover:bg-primary/10 transition-colors duration-500 flex items-center justify-center text-secondary/40 group-hover:text-primary">
+              <Scale className="h-4.5 w-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold font-mono text-slate-900 leading-none">{totalGoldReserved.toFixed(2)} g</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Total weight in vault</p>
+            <div className="text-4xl font-extrabold font-mono text-foreground tracking-tighter">{totalGoldReserved.toFixed(2)}<span className="text-2xl text-muted-foreground/50 ml-1">g</span></div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 font-medium">Total weight in vault</p>
           </div>
         </div>
 
         {/* Card 5 */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Due / Overdue</span>
-            <div className="h-7 w-7 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive">
-              <AlertCircle className="h-4 w-4" />
+        <div className="luxury-card rounded-3xl p-7 flex flex-col justify-between group">
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Due / Overdue</span>
+            <div className="h-9 w-9 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
+              <AlertCircle className="h-4.5 w-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold font-mono text-destructive leading-none">{dueThisMonthCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Expiring by end of month</p>
+            <div className="text-4xl font-extrabold font-mono text-destructive tracking-tighter">{dueThisMonthCount}</div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 font-medium">Expiring by end of month</p>
           </div>
         </div>
       </div>
@@ -214,32 +216,34 @@ export default async function DashboardPage() {
       {/* Main Charts & Activities Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         {/* Left Card: Monthly Disbursements Chart */}
-        <div className="luxury-card rounded-2xl p-6 lg:col-span-4 flex flex-col justify-between">
+        <div className="luxury-card rounded-3xl p-8 lg:col-span-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b pb-4 mb-6">
+            <div className="flex items-center justify-between border-b border-border/40 pb-5 mb-7">
               <div>
-                <h3 className="font-semibold text-base text-slate-800">Monthly Disbursements</h3>
-                <p className="text-xs text-muted-foreground mt-1">Valuation trend over the last 6 months</p>
+                <h3 className="font-bold text-lg text-foreground tracking-tight">Monthly Disbursements</h3>
+                <p className="text-xs text-muted-foreground mt-1.5 font-medium">Valuation trend over the last 6 months</p>
               </div>
-              <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-bold tracking-widest uppercase bg-secondary/5 text-secondary/60 px-3 py-1 rounded-full border border-border/50">
                 Trend chart
               </span>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               {monthlyDisbursementsData.map((data, idx) => {
                 const maxVal = Math.max(...monthlyDisbursementsData.map(m => m.amount), 1)
                 const percentage = (data.amount / maxVal) * 100
                 return (
-                  <div key={idx} className="flex items-center gap-4">
-                    <span className="w-12 text-xs font-medium text-slate-500">{data.month}</span>
-                    <div className="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div key={idx} className="flex items-center gap-5 group">
+                    <span className="w-12 text-xs font-bold text-muted-foreground uppercase tracking-wider">{data.month}</span>
+                    <div className="flex-1 h-3 bg-secondary/5 rounded-full overflow-hidden shadow-inner">
                       <div 
-                        className="h-full gold-gradient rounded-full transition-all duration-700 ease-out" 
+                        className="h-full gold-gradient rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
                         style={{ width: `${percentage}%` }}
-                      />
+                      >
+                         <div className="absolute inset-0 bg-white/20 w-full h-full transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                      </div>
                     </div>
-                    <span className="w-24 text-right text-xs font-mono font-bold text-slate-800">
+                    <span className="w-28 text-right text-sm font-mono font-bold text-foreground">
                       ₹{data.amount.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -250,48 +254,48 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Card: Recent Collections */}
-        <div className="luxury-card rounded-2xl p-6 lg:col-span-3 flex flex-col justify-between">
+        <div className="luxury-card rounded-3xl p-8 lg:col-span-3 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-5 mb-5">
               <div>
-                <h3 className="font-semibold text-base text-slate-800">Recent Collections</h3>
-                <p className="text-xs text-muted-foreground mt-1">Real-time payment logs</p>
+                <h3 className="font-bold text-lg text-foreground tracking-tight">Recent Collections</h3>
+                <p className="text-xs text-muted-foreground mt-1.5 font-medium">Real-time payment logs</p>
               </div>
               <Link 
                 href="/dashboard/reports"
-                className="text-primary hover:underline text-xs font-semibold flex items-center gap-0.5"
+                className="text-primary hover:text-primary/80 transition-colors text-xs font-bold uppercase tracking-wider flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-full"
               >
                 <span>Ledger</span>
-                <ArrowUpRight className="h-3 w-3" />
+                <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             
-            <div className="space-y-4.5">
+            <div className="space-y-1">
               {recentPayments.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-xs text-muted-foreground italic">No payments recorded yet.</p>
+                  <p className="text-xs text-muted-foreground/60 italic font-medium">No payments recorded yet.</p>
                 </div>
               ) : (
                 recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between pb-3 border-b border-slate-100 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600 uppercase">
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-secondary/5 transition-colors border border-transparent hover:border-border/50">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-secondary/5 border border-border/50 flex items-center justify-center font-bold text-sm text-foreground uppercase shadow-sm">
                         {payment.loan.customer.firstName[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 truncate">
+                        <p className="text-sm font-bold text-foreground truncate tracking-tight">
                           {payment.loan.customer.firstName} {payment.loan.customer.lastName}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-[10px] text-muted-foreground font-mono mt-1 tracking-wider uppercase">
                           ID: {payment.loan.loanNumber}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-extrabold font-mono text-success">
+                      <p className="text-sm font-extrabold font-mono text-success tracking-tight">
                         +₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                       </p>
-                      <span className="inline-flex items-center text-[9px] font-bold uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 font-mono">
+                      <span className="inline-flex items-center text-[9px] font-bold uppercase tracking-widest text-secondary/60 bg-secondary/5 px-2 py-0.5 rounded-md mt-1.5 border border-border/40">
                         {payment.paymentMode}
                       </span>
                     </div>
