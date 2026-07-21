@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { v4 as uuidv4 } from 'uuid'
 
 const BUCKET_NAME = 'kyc-documents'
 
@@ -12,7 +11,7 @@ export class KYCService {
     const supabase = await createClient()
     
     // Structure: shopId/customerId/uuid.pdf
-    const filePath = `${shopId}/${customerId}/${uuidv4()}.${extension}`
+    const filePath = `${shopId}/${customerId}/${crypto.randomUUID()}.${extension}`
 
     // Ensure we are authenticated (or we must rely on bucket policies, but server-side generated URLs are safer)
     // We generate a pre-signed upload URL

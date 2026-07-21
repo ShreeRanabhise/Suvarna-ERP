@@ -269,6 +269,8 @@ export class LoanService {
       logger.error('UPDATE_LOAN_STATUS_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
+  }
+
   static async createLoan(
     shopId: string,
     userId: string,
