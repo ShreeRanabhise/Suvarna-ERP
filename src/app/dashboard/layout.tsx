@@ -18,6 +18,19 @@ export default async function DashboardLayout({
     redirect("/super-admin")
   }
 
+  if (dbUser.role === 'STAFF' && !dbUser.branchId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="max-w-md p-8 text-center bg-card rounded-2xl border shadow-sm">
+          <h2 className="text-2xl font-bold text-foreground">Access Restricted</h2>
+          <p className="mt-4 text-muted-foreground">
+            You have not been assigned to a branch yet. Please contact your shop owner to assign you to a branch before you can access the dashboard.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const currentDate = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
     year: 'numeric',

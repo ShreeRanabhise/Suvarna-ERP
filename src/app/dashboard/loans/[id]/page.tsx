@@ -137,7 +137,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
             <div className="luxury-card rounded-2xl p-6 flex flex-col gap-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Submit Repayment Transaction</h3>
               
-              <RepaymentForm loanId={loan.id} interestDue={balances.interestDue} />
+              <RepaymentForm loanId={loan.id} interestDue={balances.interestDue} currentVersion={loan.version} />
             </div>
           ) : (
             <div className="border border-slate-200/60 bg-slate-50/50 rounded-2xl p-8 text-center text-slate-500">

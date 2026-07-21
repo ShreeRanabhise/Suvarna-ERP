@@ -5,14 +5,16 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { ActionResult } from '@/app/actions'
+import { requirePermission } from '@/lib/permissions'
+import { ShopService } from '@/services/shop.service'
 
 const shopSchema = z.object({
-  name: z.string().min(1, 'Shop name is required'),
+  name: z.string().min(1, 'Shop name is required').max(100).trim(),
   subscriptionPlan: z.enum(['STANDARD', 'ENTERPRISE']),
   subscriptionEnd: z.string(),
   whatsappAddon: z.boolean().default(false),
-  ownerEmail: z.string().email('Invalid email address'),
-  ownerName: z.string().min(1, 'Owner name is required'),
+  ownerEmail: z.string().email('Invalid email address').max(100),
+  ownerName: z.string().min(1, 'Owner name is required').max(100).trim(),
 })
 
 // Helper to verify Super Admin role
@@ -22,9 +24,9 @@ async function checkSuperAdmin() {
   if (!user) throw new Error('Unauthorized')
 
   const dbUser = await prisma.user.findUnique({ where: { authId: user.id } })
-  if (!dbUser || dbUser.role !== 'SUPER_ADMIN') {
-    throw new Error('Forbidden: Super Admin access required')
-  }
+  if (!dbUser) throw new Error('User not found')
+
+  requirePermission(dbUser.role, 'shops.manage')
   return dbUser
 }
 
@@ -43,29 +45,7 @@ export async function createShop(formData: FormData): Promise<ActionResult<{ sho
 
     const parsed = shopSchema.parse(data)
 
-    const shop = await prisma.$transaction(async (tx) => {
-      // 1. Create the shop
-      const newShop = await tx.shop.create({
-        data: {
-          name: parsed.name,
-          subscriptionPlan: parsed.subscriptionPlan,
-          subscriptionEnd: new Date(parsed.subscriptionEnd),
-          whatsappAddon: parsed.whatsappAddon,
-        }
-      })
-
-      // 2. Create the Owner user mapping
-      await tx.user.create({
-        data: {
-          email: parsed.ownerEmail,
-          name: parsed.ownerName,
-          role: 'OWNER',
-          shopId: newShop.id,
-        }
-      })
-
-      return newShop
-    })
+    const shop = await ShopService.createShop(parsed)
 
     revalidatePath('/super-admin')
     return { success: true, data: { shopId: shop.id } }
@@ -78,17 +58,7 @@ export async function toggleShopStatus(shopId: string, isSuspended: boolean): Pr
   try {
     await checkSuperAdmin()
 
-  // We can suspend by setting the subscriptionEnd to past or adding a status field.
-  // For this model, let's toggle the subscriptionEnd date to "now" if suspending,
-  // or extend it by 1 year if activating.
-  const subscriptionEnd = isSuspended
-    ? new Date() // Expire immediately (Suspend)
-    : new Date(new Date().setFullYear(new Date().getFullYear() + 1)) // Renew +1 year
-
-  await prisma.shop.update({
-    where: { id: shopId },
-    data: { subscriptionEnd }
-  })
+    await ShopService.toggleShopStatus(shopId, isSuspended)
 
     revalidatePath('/super-admin')
     return { success: true }

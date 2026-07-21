@@ -5,10 +5,12 @@ import { repayLoan } from '@/app/actions'
 
 export function RepaymentForm({ 
   loanId, 
-  interestDue 
+  interestDue,
+  currentVersion
 }: { 
   loanId: string, 
-  interestDue: number 
+  interestDue: number,
+  currentVersion: number
 }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -19,6 +21,7 @@ export function RepaymentForm({
     setLoading(true)
 
     const formData = new FormData(event.currentTarget)
+    formData.append('idempotencyKey', crypto.randomUUID())
     try {
       const res = await repayLoan(formData)
       if (!res.success) {
@@ -38,6 +41,7 @@ export function RepaymentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <input type="hidden" name="loanId" value={loanId} />
+      <input type="hidden" name="currentVersion" value={currentVersion} />
       
       <div className="grid grid-cols-2 gap-4">
         <div>

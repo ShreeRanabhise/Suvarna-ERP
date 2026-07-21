@@ -3,6 +3,132 @@ import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
 
 export class CustomerService {
+  static async createCustomer(
+    shopId: string,
+    userId: string,
+    customerData: {
+      firstName: string
+      lastName: string
+      phone: string
+      aadhaar: string
+      address: string
+      documentUrl?: string
+      branchId?: string | null
+    },
+    idempotencyKey?: string
+  ) {
+    const prisma = getTenantPrisma(shopId)
+    const safeKey = idempotencyKey || randomUUID()
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Idempotency check
+      const existingLog = await tx.idempotencyLog.findUnique({
+        where: { key: safeKey }
+      })
+      if (existingLog && existingLog.payload) {
+        return JSON.parse(existingLog.payload) as { customerId: string }
+      }
+
+      await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
+      
+      const shop = await tx.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          subscriptionPlan: true,
+          _count: { select: { customers: true } }
+        }
+      })
+
+      if (shop?.subscriptionPlan === 'STANDARD' && (shop._count?.customers || 0) >= 100) {
+        throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
+      }
+
+      const newCustomer = await tx.customer.create({
+        data: {
+          ...customerData,
+          shopId,
+        }
+      })
+
+      await tx.customerKYCVersion.create({
+        data: {
+          customerId: newCustomer.id,
+          version: 1,
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          phone: customerData.phone,
+          email: null,
+          aadhaar: customerData.aadhaar,
+          address: customerData.address,
+          changedById: userId,
+          reason: 'Initial creation'
+        }
+      })
+
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'CREATE_CUSTOMER',
+          entity: 'CUSTOMER',
+          entityId: newCustomer.id,
+          details: JSON.stringify({ name: customerData.firstName })
+        }
+      })
+
+      const payload = { customerId: newCustomer.id }
+      
+      if (idempotencyKey) {
+        await tx.idempotencyLog.create({
+          data: {
+            key: safeKey,
+            shopId,
+            userId,
+            action: 'CREATE_CUSTOMER',
+            payload: JSON.stringify(payload)
+          }
+        })
+      }
+
+      return payload
+    })
+
+    return result
+  }
+
+  static async deleteCustomer(shopId: string, userId: string, customerId: string) {
+    const prisma = getTenantPrisma(shopId)
+
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, shopId, isDeleted: false },
+      include: {
+        loans: { where: { isDeleted: false, status: 'ACTIVE' } }
+      }
+    })
+
+    if (!customer) throw new Error('Customer not found')
+    if (customer.loans.length > 0) throw new Error('Cannot delete customer with active loans')
+
+    await prisma.$transaction(async (tx) => {
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { isDeleted: true }
+      })
+      await tx.auditLog.create({
+        data: {
+          shopId,
+          userId,
+          action: 'DELETE_CUSTOMER',
+          entity: 'CUSTOMER',
+          entityId: customerId,
+          details: JSON.stringify({ name: customer.firstName })
+        }
+      })
+    })
+
+    logger.info('DELETE_CUSTOMER', `Customer ${customerId} deleted`, { shopId, userId })
+  }
+
   static async onboardCustomerWithLoan(
     shopId: string,
     userId: string,
@@ -12,6 +138,8 @@ export class CustomerService {
       email: string | null
       aadhaar: string
       address: string
+      documentUrl?: string
+      branchId?: string | null
     },
     loanData: {
       principalAmount: number
@@ -55,12 +183,14 @@ export class CustomerService {
         const newCustomer = await tx.customer.create({
           data: {
             shopId,
+            branchId: customerData.branchId || null,
             firstName: customerData.firstName,
             lastName: '',
             phone: customerData.phone,
             email: customerData.email,
             aadhaar: customerData.aadhaar,
             address: customerData.address,
+            documentUrl: customerData.documentUrl,
           }
         })
 

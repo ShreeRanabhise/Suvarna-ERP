@@ -4,7 +4,8 @@ import SearchInput from "@/components/search-input"
 import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import { ArrowRight, Landmark } from "lucide-react"
+import { ArrowRight, Landmark, ChevronLeft, ChevronRight } from "lucide-react"
+import { calculateLoanBalances } from "@/lib/loan-utils"
 
 export default async function LoansPage({
   searchParams,
@@ -22,12 +23,20 @@ export default async function LoansPage({
   const statusFilter = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus
   
   const activeTab = statusFilter || 'ALL'
+  
+  const page = parseInt((search?.page as string) || '1', 10)
+  const pageSize = 10
+  const skip = (page - 1) * pageSize
 
   const whereClause: any = {
     shopId: dbUser.shopId,
     isDeleted: false,
   }
   
+  if (dbUser.role === 'STAFF') {
+    whereClause.branchId = dbUser.branchId || 'UNASSIGNED'
+  }
+
   if (activeTab !== 'ALL') {
     whereClause.status = activeTab
   }
@@ -49,13 +58,21 @@ export default async function LoansPage({
     ]
   }
 
-  const loans = await prisma.loan.findMany({
-    where: whereClause,
-    include: {
-      customer: true
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  const [loans, totalCount] = await Promise.all([
+    prisma.loan.findMany({
+      where: whereClause,
+      include: {
+        customer: true,
+        payments: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize
+    }),
+    prisma.loan.count({ where: whereClause })
+  ])
+  
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   return (
       <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
@@ -109,7 +126,7 @@ export default async function LoansPage({
               <tr>
                 <th className="px-6 py-4">Loan Reference</th>
                 <th className="px-6 py-4">Customer Name</th>
-                <th className="px-6 py-4">Principal Amount</th>
+                <th className="px-6 py-4">Total Due</th>
                 <th className="px-6 py-4">Contract Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -122,7 +139,9 @@ export default async function LoansPage({
                   </td>
                 </tr>
               ) : (
-                loans.map((loan) => (
+                loans.map((loan) => {
+                  const balances = calculateLoanBalances(loan as any)
+                  return (
                   <tr key={loan.id} className="hover:bg-slate-50/40 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">
                       {loan.loanNumber}
@@ -133,7 +152,7 @@ export default async function LoansPage({
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-slate-700 font-bold">
-                      ₹{Number(loan.principalAmount).toLocaleString('en-IN')}
+                      ₹{balances.totalDue.toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -166,11 +185,39 @@ export default async function LoansPage({
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              {page > 1 && (
+                <Link 
+                  href={`/dashboard/loans?status=${activeTab}&page=${page - 1}${query ? `&query=${query}` : ''}`}
+                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link 
+                  href={`/dashboard/loans?status=${activeTab}&page=${page + 1}${query ? `&query=${query}` : ''}`}
+                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

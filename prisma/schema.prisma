@@ -267,3 +267,25 @@ model LoanStateHistory {
 
   @@index([loanId])
 }
+
+model IdempotencyLog {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  shopId    String
+  userId    String
+  action    String
+  payload   String?
+  createdAt DateTime @default(now())
+
+  @@index([shopId])
+  @@index([key])
+}
+
+model RateLimit {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([key])
+}

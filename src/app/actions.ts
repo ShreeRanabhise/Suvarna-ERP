@@ -6,7 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CustomerService } from '@/services/customer.service'
 import { LoanService } from '@/services/loan.service'
+import { BranchService } from '@/services/branch.service'
+import { UserService } from '@/services/user.service'
+import { enforceRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+import { requirePermission } from '@/lib/permissions'
 
 export type ActionResult<T = void> = 
   | { success: true; data?: T } 
@@ -14,22 +18,23 @@ export type ActionResult<T = void> =
 
 // Validation Schemas
 const customerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
-  lastName: z.string().min(1, 'Last name is required').regex(/^[a-zA-Z\s]*$/, 'Only letters and spaces allowed in name'),
+  firstName: z.string().min(1, 'First name is required').max(50).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
+  lastName: z.string().min(1, 'Last name is required').max(50).regex(/^[a-zA-Z\s]*$/, 'Only letters and spaces allowed in name').trim(),
   phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
   aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
-  address: z.string().min(5, 'Please provide a complete address'),
+  address: z.string().min(5, 'Please provide a complete address').max(250).trim(),
+  documentUrl: z.string().url().max(500).optional().nullable(),
 })
 
 const loanSchema = z.object({
   customerId: z.string().uuid(),
-  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0'),
-  interestRate: z.number().min(0.1, 'Interest rate must be at least 0.1%'),
+  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0').max(10000000),
+  interestRate: z.number().min(0.1, 'Interest rate must be at least 0.1%').max(100),
   ltvPercentage: z.number().min(0.1, 'LTV must be > 0').max(100, 'LTV cannot exceed 100%'),
-  itemName: z.string().min(1, 'Item name is required'),
-  weightGrams: z.number().min(0.01, 'Weight must be greater than 0'),
-  purity: z.string().min(1, 'Purity is required'),
-  valuation: z.number().min(0.01, 'Valuation must be greater than 0'),
+  itemName: z.string().min(1, 'Item name is required').max(100).trim(),
+  weightGrams: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
+  purity: z.string().min(1, 'Purity is required').max(20).trim(),
+  valuation: z.number().min(0.01, 'Valuation must be greater than 0').max(20000000),
 })
 
 
@@ -41,16 +46,18 @@ async function getTenantContext() {
 
   const dbUser = await prisma.user.findUnique({
     where: { authId: user.id },
-    select: { id: true, shopId: true, role: true }
+    select: { id: true, shopId: true, role: true, branchId: true }
   })
   if (!dbUser || !dbUser.shopId) throw new Error('No tenant associated')
 
-  return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role }
+  return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role, branchId: dbUser.branchId }
 }
 
 export async function createCustomer(formData: FormData): Promise<ActionResult<{ customerId: string }>> {
   try {
-    const { shopId, userId } = await getTenantContext()
+    const { shopId, userId, role, branchId } = await getTenantContext()
+    requirePermission(role, 'customer.create')
+    await enforceRateLimit('createCustomer', userId)
     
     const data = {
       firstName: formData.get('firstName') as string,
@@ -58,64 +65,25 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
       phone: formData.get('phone') as string,
       aadhaar: formData.get('aadhaar') as string,
       address: formData.get('address') as string,
+      documentUrl: formData.get('documentUrl') as string | undefined,
     }
 
     const parsed = customerSchema.parse(data)
+    
+    const idempotencyKey = (formData.get('idempotencyKey') as string) || undefined
 
-    const customer = await prisma.$transaction(async (tx) => {
-      // Pessimistically lock the shop row to prevent concurrent subscription limit bypass
-      await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
-      
-      const shop = await tx.shop.findUnique({
-        where: { id: shopId },
-        select: {
-          subscriptionPlan: true,
-          _count: { select: { customers: true } }
-        }
-      })
-
-      if (shop?.subscriptionPlan === 'STANDARD' && (shop._count?.customers || 0) >= 100) {
-        throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
-      }
-
-      const newCustomer = await tx.customer.create({
-        data: {
-          ...parsed,
-          shopId,
-        }
-      })
-
-      // Write initial KYC Version
-      await tx.customerKYCVersion.create({
-        data: {
-          customerId: newCustomer.id,
-          version: 1,
-          firstName: parsed.firstName,
-          lastName: parsed.lastName,
-          phone: parsed.phone,
-          email: null,
-          aadhaar: parsed.aadhaar,
-          address: parsed.address,
-          changedById: userId,
-          reason: 'Initial registration'
-        }
-      })
-      
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'CREATE_CUSTOMER',
-          entity: 'CUSTOMER',
-          entityId: newCustomer.id,
-        }
-      })
-
-      return newCustomer
-    })
+    const customer = await CustomerService.createCustomer(
+      shopId,
+      userId,
+      {
+        ...parsed,
+        branchId: role === 'STAFF' ? branchId : null,
+      },
+      idempotencyKey
+    )
 
     revalidatePath('/dashboard/customers')
-    return { success: true, data: { customerId: customer.id } }
+    return { success: true, data: { customerId: customer.customerId } }
   } catch (error: any) {
     return { success: false, error: error.message || 'An unexpected error occurred' }
   }
@@ -123,7 +91,9 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
 
 export async function createLoan(formData: FormData): Promise<ActionResult<{ loanId: string }>> {
   try {
-    const { shopId, userId } = await getTenantContext()
+    const { shopId, userId, role, branchId } = await getTenantContext()
+    requirePermission(role, 'loan.create')
+    await enforceRateLimit('createLoan', userId)
     
     const data = {
       customerId: formData.get('customerId') as string,
@@ -135,8 +105,7 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
       purity: formData.get('purity') as string,
       valuation: Number(formData.get('valuation')),
     }
-    
-    const idempotencyKey = (formData.get('idempotencyKey') as string) || crypto.randomUUID()
+    const idempotencyKey = formData.get('idempotencyKey') as string | undefined
 
     const parsed = loanSchema.parse(data)
 
@@ -146,73 +115,16 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
       throw new Error('Loan amount exceeds allowed LTV')
     }
 
-    const loan = await prisma.$transaction(async (tx) => {
-      // Pessimistically lock the shop row to guarantee sequential loan numbers
-      await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
-      
-      // Generate Loan Number SGL-{YEAR}-{COUNT} inside the lock
-      const count = await tx.loan.count({ where: { shopId } })
-      const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
-
-      const newLoan = await tx.loan.create({
-        data: {
-          loanNumber,
-          shopId,
-          customerId: parsed.customerId,
-          principalAmount: parsed.principalAmount,
-          interestRate: parsed.interestRate,
-          ltvPercentage: parsed.ltvPercentage,
-          pledgedItems: {
-            create: {
-              name: parsed.itemName,
-              weightGrams: parsed.weightGrams,
-              purity: parsed.purity,
-              valuation: parsed.valuation
-            }
-          }
-        }
-      })
-
-      // Record disbursement debit in double-entry ledger
-      await tx.ledgerEntry.create({
-        data: {
-          shopId,
-          loanId: newLoan.id,
-          category: 'PRINCIPAL',
-          type: 'DEBIT',
-          amount: parsed.principalAmount,
-          balanceAfter: parsed.principalAmount,
-          performedBy: userId,
-          idempotencyKey: `disburse-loan-principal-${idempotencyKey}` // Secure client idempotency
-        }
-      })
-
-      // Log state machine status initialization
-      await tx.loanStateHistory.create({
-        data: {
-          loanId: newLoan.id,
-          fromStatus: 'ACTIVE',
-          toStatus: 'ACTIVE',
-          changedById: userId,
-          details: 'Initial disburse'
-        }
-      })
-
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'CREATE_LOAN',
-          entity: 'LOAN',
-          entityId: newLoan.id,
-        }
-      })
-
-      return newLoan
-    })
+    const result = await LoanService.createLoan(
+      shopId,
+      userId,
+      parsed,
+      role === 'STAFF' ? branchId : null,
+      idempotencyKey
+    )
 
     revalidatePath('/dashboard/loans')
-    return { success: true, loanId: loan.id }
+    return { success: true, data: { loanId: result.loanId } }
   } catch (error: any) {
     return { success: false, error: error.message || 'An unexpected error occurred' }
   }
@@ -220,21 +132,25 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
 
 
 const onboardingSchema = z.object({
-  name: z.string().min(1, 'Name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
+  name: z.string().min(1, 'Name is required').max(100).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
   phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string().email('Invalid email').max(100).optional().or(z.literal('')),
   aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
-  address: z.string().min(5, 'Please provide a complete address'),
-  goldItemName: z.string().min(1, 'Gold item name is required'),
-  goldWeight: z.number().min(0.01, 'Weight must be greater than 0'),
-  goldPurity: z.string().min(1, 'Purity is required'),
-  valuation: z.number().min(0.01, 'Valuation must be greater than 0'),
-  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0'),
+  address: z.string().min(5, 'Please provide a complete address').max(250).trim(),
+  documentUrl: z.string().url().max(500).optional().nullable(),
+  goldItemName: z.string().min(1, 'Gold item name is required').max(100).trim(),
+  goldWeight: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
+  goldPurity: z.string().min(1, 'Purity is required').max(20).trim(),
+  valuation: z.number().min(0.01, 'Valuation must be greater than 0').max(20000000),
+  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0').max(10000000),
 })
 
 export async function onboardCustomerWithLoan(formData: FormData): Promise<ActionResult<{ customerId: string, loanId: string }>> {
   try {
-    const { shopId, userId } = await getTenantContext()
+    const { shopId, userId, role, branchId } = await getTenantContext()
+    requirePermission(role, 'customer.create')
+    requirePermission(role, 'loan.create')
+    await enforceRateLimit('onboardCustomerWithLoan', userId)
 
     const customerData = {
       firstName: formData.get('name') as string,
@@ -242,6 +158,8 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
       email: formData.get('email') as string,
       aadhaar: formData.get('aadhaar') as string,
       address: formData.get('address') as string,
+      documentUrl: formData.get('documentUrl') as string | undefined,
+      branchId: role === 'STAFF' ? branchId : null,
     }
 
     const loanData = {
@@ -272,28 +190,15 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
 }
 
 const staffSchema = z.object({
-  name: z.string().min(1, 'Name is required').regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name'),
-  email: z.string().email('Invalid email address'),
+  name: z.string().min(1, 'Name is required').max(100).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
+  email: z.string().email('Invalid email address').max(100),
   branchId: z.string().uuid().optional().or(z.literal('')),
 })
 
 export async function createStaffMember(formData: FormData): Promise<ActionResult<{ staffId: string }>> {
   try {
     const { shopId, userId, role } = await getTenantContext()
-
-    // 1. Authorization: Only OWNER can add staff
-    if (role !== 'OWNER') {
-      throw new Error('Forbidden: Only shop owners can manage staff')
-    }
-
-    // 2. Plan Check: Only ENTERPRISE shops can add staff
-    const shop = await prisma.shop.findUnique({
-      where: { id: shopId },
-      select: { subscriptionPlan: true }
-    })
-    if (shop?.subscriptionPlan !== 'ENTERPRISE') {
-      throw new Error('Staff management is only available on Enterprise plans')
-    }
+    requirePermission(role, 'users.manage')
 
     const data = {
       name: formData.get('name') as string,
@@ -303,54 +208,13 @@ export async function createStaffMember(formData: FormData): Promise<ActionResul
 
     const parsed = staffSchema.parse(data)
 
-    // 3. Check duplicate email in public.User
-    const existingUser = await prisma.user.findUnique({
-      where: { email: parsed.email },
-      select: { id: true }
-    })
-    if (existingUser) {
-      throw new Error('A user with this email address already exists')
-    }
-
-    // 4. Create User in Supabase Auth via Admin API
-    const adminAuth = createAdminClient()
-    const { data: authData, error: authError } = await adminAuth.auth.admin.createUser({
-      email: parsed.email,
-      password: 'Welcome@123',
-      email_confirm: true,
-    })
-    if (authError || !authData.user) {
-      throw new Error(authError?.message || 'Failed to create auth user')
-    }
-
-    const authId = authData.user.id
-
-    // 5. Create the staff member and audit log transactionally
-    const staff = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          authId,
-          email: parsed.email,
-          name: parsed.name,
-          role: 'STAFF',
-          shopId,
-          branchId: parsed.branchId || null,
-        }
-      })
-
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'CREATE_STAFF_MEMBER',
-          entity: 'USER',
-          entityId: newUser.id,
-          details: JSON.stringify({ email: newUser.email, name: newUser.name, branchId: newUser.branchId })
-        }
-      })
-
-      return newUser
-    })
+    const staff = await UserService.createStaffMember(
+      shopId,
+      userId,
+      parsed.name,
+      parsed.email,
+      parsed.branchId || null
+    )
 
     revalidatePath('/dashboard/staff')
     return { success: true, data: { staffId: staff.id } }
@@ -362,42 +226,9 @@ export async function createStaffMember(formData: FormData): Promise<ActionResul
 export async function deleteStaffMember(staffId: string): Promise<ActionResult> {
   try {
     const { shopId, userId, role } = await getTenantContext()
+    requirePermission(role, 'users.manage')
 
-    if (role !== 'OWNER') {
-      throw new Error('Forbidden: Only shop owners can manage staff')
-    }
-
-    const staff = await prisma.user.findFirst({
-      where: { id: staffId, shopId, role: 'STAFF' },
-      select: { id: true, authId: true, email: true, name: true }
-    })
-    if (!staff) {
-      throw new Error('Staff member not found')
-    }
-
-    const adminAuth = createAdminClient()
-
-    await prisma.$transaction(async (tx) => {
-      const deletedStaff = await tx.user.delete({
-        where: { id: staffId }
-      })
-
-      // Delete from Supabase Auth if authId exists
-      if (deletedStaff.authId) {
-        await adminAuth.auth.admin.deleteUser(deletedStaff.authId)
-      }
-
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'DELETE_STAFF_MEMBER',
-          entity: 'USER',
-          entityId: staffId,
-          details: JSON.stringify({ email: staff.email, name: staff.name })
-        }
-      })
-    })
+    await UserService.deleteStaffMember(shopId, userId, staffId)
 
     revalidatePath('/dashboard/staff')
     return { success: true }
@@ -407,16 +238,13 @@ export async function deleteStaffMember(staffId: string): Promise<ActionResult> 
 }
 
 const branchSchema = z.object({
-  name: z.string().min(3, 'Branch name must be at least 3 characters long'),
+  name: z.string().min(3, 'Branch name must be at least 3 characters long').max(50).trim(),
 })
 
 export async function createBranch(formData: FormData): Promise<ActionResult<{ branchId: string }>> {
   try {
     const { shopId, userId, role } = await getTenantContext()
-
-    if (role !== 'OWNER') {
-      throw new Error('Forbidden: Only shop owners can manage branches')
-    }
+    requirePermission(role, 'branches.manage')
 
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
@@ -432,35 +260,7 @@ export async function createBranch(formData: FormData): Promise<ActionResult<{ b
 
     const parsed = branchSchema.parse(data)
 
-    const existingBranch = await prisma.branch.findFirst({
-      where: { shopId, name: parsed.name },
-      select: { id: true }
-    })
-    if (existingBranch) {
-      throw new Error('A branch with this name already exists in your shop')
-    }
-
-    const branch = await prisma.$transaction(async (tx) => {
-      const newBranch = await tx.branch.create({
-        data: {
-          name: parsed.name,
-          shopId,
-        }
-      })
-
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'CREATE_BRANCH',
-          entity: 'BRANCH',
-          entityId: newBranch.id,
-          details: JSON.stringify({ name: newBranch.name })
-        }
-      })
-
-      return newBranch
-    })
+    const branch = await BranchService.createBranch(shopId, userId, parsed.name)
 
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
@@ -473,51 +273,9 @@ export async function createBranch(formData: FormData): Promise<ActionResult<{ b
 export async function deleteBranch(branchId: string): Promise<ActionResult> {
   try {
     const { shopId, userId, role } = await getTenantContext()
+    requirePermission(role, 'branches.manage')
 
-    if (role !== 'OWNER') {
-      throw new Error('Forbidden: Only shop owners can manage branches')
-    }
-
-    const branch = await prisma.branch.findFirst({
-      where: { id: branchId, shopId },
-      select: {
-        id: true,
-        name: true,
-        _count: {
-          select: { users: true, customers: true, loans: true }
-        }
-      }
-    })
-    if (!branch) {
-      throw new Error('Branch not found')
-    }
-
-    if (branch._count.users > 0) {
-      throw new Error('Cannot delete branch: Active staff members are still assigned to it.')
-    }
-    if (branch._count.customers > 0) {
-      throw new Error('Cannot delete branch: Customers are still associated with it.')
-    }
-    if (branch._count.loans > 0) {
-      throw new Error('Cannot delete branch: Active loans are still registered at it.')
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.branch.delete({
-        where: { id: branchId }
-      })
-
-      await tx.auditLog.create({
-        data: {
-          shopId,
-          userId,
-          action: 'DELETE_BRANCH',
-          entity: 'BRANCH',
-          entityId: branchId,
-          details: JSON.stringify({ name: branch.name })
-        }
-      })
-    })
+    await BranchService.deleteBranch(shopId, userId, branchId)
 
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
@@ -544,13 +302,16 @@ function validateStateTransition(from: string, to: string) {
 
 export async function repayLoan(formData: FormData): Promise<ActionResult<{ paymentId: string }>> {
   try {
-    const { shopId, userId } = await getTenantContext()
+    const { shopId, userId, role } = await getTenantContext()
+    requirePermission(role, 'loan.repay')
+    await enforceRateLimit('repayLoan', userId)
     
     const loanId = formData.get('loanId') as string
     const amountPaid = Number(formData.get('amountPaid'))
     const paymentMode = formData.get('paymentMode') as 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
     const referenceId = formData.get('referenceId') as string | null
     const currentVersion = Number(formData.get('currentVersion') || 0)
+    const idempotencyKey = formData.get('idempotencyKey') as string | undefined
 
     if (!loanId || isNaN(amountPaid) || amountPaid <= 0) {
       throw new Error('Invalid payment details')
@@ -563,7 +324,8 @@ export async function repayLoan(formData: FormData): Promise<ActionResult<{ paym
       amountPaid,
       paymentMode,
       referenceId,
-      currentVersion
+      currentVersion,
+      idempotencyKey
     )
 
     revalidatePath('/dashboard/loans')
@@ -579,7 +341,8 @@ export async function repayLoan(formData: FormData): Promise<ActionResult<{ paym
 
 export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED', currentVersion: number = 0): Promise<ActionResult> {
   try {
-    const { shopId, userId } = await getTenantContext()
+    const { shopId, userId, role } = await getTenantContext()
+    requirePermission(role, 'loan.update')
 
     const result = await LoanService.updateStatus(shopId, userId, loanId, status, currentVersion)
 
@@ -595,3 +358,16 @@ export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSE
 }
 
 
+export async function deleteCustomer(customerId: string): Promise<ActionResult> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
+    requirePermission(role, 'customer.delete')
+
+    await CustomerService.deleteCustomer(shopId, userId, customerId)
+
+    revalidatePath('/dashboard/customers')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'An unexpected error occurred' }
+  }
+}

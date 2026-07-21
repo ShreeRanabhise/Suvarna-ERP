@@ -4,7 +4,8 @@ import SearchInput from "@/components/search-input"
 import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import { ArrowRight, User } from "lucide-react"
+import { ArrowRight, User, ChevronLeft, ChevronRight } from "lucide-react"
+import DeleteCustomerButton from "@/components/delete-customer-button"
 
 export default async function CustomersPage({
   searchParams,
@@ -18,9 +19,17 @@ export default async function CustomersPage({
   const rawQuery = search?.query
   const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
 
+  const page = parseInt((search?.page as string) || '1', 10)
+  const pageSize = 10
+  const skip = (page - 1) * pageSize
+
   const whereClause: any = {
     shopId: dbUser.shopId,
     isDeleted: false,
+  }
+
+  if (dbUser.role === 'STAFF') {
+    whereClause.branchId = dbUser.branchId || 'UNASSIGNED'
   }
 
   if (query) {
@@ -32,15 +41,22 @@ export default async function CustomersPage({
     ]
   }
 
-  const customers = await prisma.customer.findMany({
-    where: whereClause,
-    include: {
-      loans: {
-        where: { isDeleted: false }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  const [customers, totalCount] = await Promise.all([
+    prisma.customer.findMany({
+      where: whereClause,
+      include: {
+        loans: {
+          where: { isDeleted: false }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize
+    }),
+    prisma.customer.count({ where: whereClause })
+  ])
+  
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -110,7 +126,7 @@ export default async function CustomersPage({
                           {activeLoans} Active
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
                         <Link 
                           href={`/dashboard/customers/${customer.id}`} 
                           className="inline-flex items-center gap-1 border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold transition"
@@ -118,6 +134,12 @@ export default async function CustomersPage({
                           <span>Profile</span>
                           <ArrowRight className="h-3 w-3 text-slate-400" />
                         </Link>
+                        {dbUser.role !== 'STAFF' && (
+                          <DeleteCustomerButton 
+                            customerId={customer.id} 
+                            customerName={`${customer.firstName} ${customer.lastName}`} 
+                          />
+                        )}
                       </td>
                     </tr>
                   )
@@ -126,6 +148,33 @@ export default async function CustomersPage({
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              {page > 1 && (
+                <Link 
+                  href={`/dashboard/customers?page=${page - 1}${query ? `&query=${query}` : ''}`}
+                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link 
+                  href={`/dashboard/customers?page=${page + 1}${query ? `&query=${query}` : ''}`}
+                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

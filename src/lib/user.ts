@@ -15,11 +15,18 @@ export const getCachedUser = cache(async () => {
       name: true,
       role: true,
       shopId: true,
+      branchId: true,
       shop: {
         select: {
           id: true,
           name: true,
           subscriptionPlan: true
+        }
+      },
+      branch: {
+        select: {
+          id: true,
+          name: true
         }
       }
     }

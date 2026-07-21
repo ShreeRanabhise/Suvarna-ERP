@@ -30,15 +30,25 @@ export class LoanService {
     amountPaid: number,
     paymentMode: 'CASH' | 'UPI' | 'BANK' | 'CHEQUE',
     referenceId: string | null,
-    currentVersion: number
+    currentVersion: number,
+    idempotencyKey?: string
   ) {
     const prisma = getTenantPrisma(shopId)
     const correlationId = randomUUID()
+    const safeKey = idempotencyKey || correlationId
 
     try {
       logger.info('REPAY_LOAN_START', `Initiating repayment of ${amountPaid} for loan ${loanId}`, { tenantId: shopId, userId, correlationId })
 
       const result = await prisma.$transaction(async (tx) => {
+        // Idempotency check
+        const existingLog = await tx.idempotencyLog.findUnique({
+          where: { key: safeKey }
+        })
+        if (existingLog && existingLog.payload) {
+          return JSON.parse(existingLog.payload) as { paymentId: string, isFullyPaid: boolean, customerId: string }
+        }
+
         // Optimistic Locking: We only fetch the loan if the version matches what the client expects.
         // If someone else modified the loan (version incremented), this will return null.
         const loan = await tx.loan.findFirst({
@@ -163,7 +173,21 @@ export class LoanService {
           }
         })
 
-        return { paymentId: newPayment.id, isFullyPaid, customerId: loan.customerId }
+        const payload = { paymentId: newPayment.id, isFullyPaid, customerId: loan.customerId }
+
+        if (idempotencyKey) {
+          await tx.idempotencyLog.create({
+            data: {
+              key: safeKey,
+              shopId,
+              userId,
+              action: 'REPAY_LOAN',
+              payload: JSON.stringify(payload)
+            }
+          })
+        }
+
+        return payload
       })
 
       logger.info('REPAY_LOAN_SUCCESS', `Successfully repaid ${amountPaid} for loan ${loanId}`, { tenantId: shopId, userId, correlationId })
@@ -243,6 +267,118 @@ export class LoanService {
       return result
     } catch (error: any) {
       logger.error('UPDATE_LOAN_STATUS_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
+      throw error
+    }
+  static async createLoan(
+    shopId: string,
+    userId: string,
+    loanData: {
+      customerId: string
+      principalAmount: number
+      interestRate: number
+      ltvPercentage: number
+      itemName: string
+      weightGrams: number
+      purity: string
+      valuation: number
+    },
+    branchId?: string | null,
+    idempotencyKey?: string
+  ) {
+    const prisma = getTenantPrisma(shopId)
+    const correlationId = randomUUID()
+    const safeKey = idempotencyKey || correlationId
+
+    try {
+      logger.info('CREATE_LOAN_START', `Initiating loan creation for customer ${loanData.customerId}`, { tenantId: shopId, userId, correlationId })
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Idempotency check
+        const existingLog = await tx.idempotencyLog.findUnique({
+          where: { key: safeKey }
+        })
+        if (existingLog && existingLog.payload) {
+          return JSON.parse(existingLog.payload) as { loanId: string }
+        }
+
+        // Pessimistically lock the shop row to guarantee sequential loan numbers
+        await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
+        
+        const count = await tx.loan.count({ where: { shopId } })
+        const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+
+        const newLoan = await tx.loan.create({
+          data: {
+            loanNumber,
+            shopId,
+            branchId,
+            customerId: loanData.customerId,
+            principalAmount: loanData.principalAmount,
+            interestRate: loanData.interestRate,
+            ltvPercentage: loanData.ltvPercentage,
+            pledgedItems: {
+              create: {
+                name: loanData.itemName,
+                weightGrams: loanData.weightGrams,
+                purity: loanData.purity,
+                valuation: loanData.valuation
+              }
+            }
+          }
+        })
+
+        // Initialize Ledger with Principal Disbursement
+        await tx.ledgerEntry.create({
+          data: {
+            shopId,
+            loanId: newLoan.id,
+            category: 'PRINCIPAL',
+            type: 'DEBIT',
+            amount: loanData.principalAmount,
+            balanceAfter: loanData.principalAmount,
+            performedBy: userId,
+            idempotencyKey: `disburse-loan-principal-${safeKey}`
+          }
+        })
+
+        // Log state machine status initialization
+        await tx.loanStateHistory.create({
+          data: {
+            loanId: newLoan.id,
+            fromStatus: 'ACTIVE',
+            toStatus: 'ACTIVE',
+            changedById: userId,
+            details: 'Initial disburse'
+          }
+        })
+
+        await tx.auditLog.create({
+          data: {
+            shopId,
+            userId,
+            action: 'CREATE_LOAN',
+            entity: 'LOAN',
+            entityId: newLoan.id,
+          }
+        })
+
+        if (idempotencyKey) {
+          await tx.idempotencyLog.create({
+            data: {
+              key: idempotencyKey,
+              action: 'CREATE_LOAN',
+              payload: JSON.stringify({ loanId: newLoan.id })
+            }
+          })
+        }
+
+        return { loanId: newLoan.id }
+      })
+
+      logger.info('CREATE_LOAN_SUCCESS', `Successfully created loan ${result.loanId}`, { tenantId: shopId, userId, correlationId })
+      return result
+    } catch (error: any) {
+      logger.error('CREATE_LOAN_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
   }
