@@ -1,5 +1,5 @@
 import Link from "next/link"
-import OnboardCustomerDialog from "@/components/onboard-customer-dialog"
+import CreateCustomerDialog from "@/components/create-customer-dialog"
 import SearchInput from "@/components/search-input"
 import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
@@ -85,7 +85,7 @@ export default async function CustomersPage({
           <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">Customers</h2>
           <p className="text-sm text-foreground-secondary mt-1">Manage and onboard active client profiles</p>
         </div>
-        <OnboardCustomerDialog />
+        <CreateCustomerDialog />
       </div>
 
       <div className="rounded-lg border border-border bg-card shadow-subtle overflow-hidden mt-4">

@@ -24,7 +24,8 @@ const customerSchema = z.object({
   phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
   aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
   address: z.string().min(5, 'Please provide a complete address').max(250).trim(),
-  documentUrl: z.string().url().max(500).optional().nullable(),
+  aadhaarPhotoUrl: z.string().url().max(500).optional().nullable(),
+  customerPhotoUrl: z.string().url().max(500).optional().nullable(),
 })
 
 const loanSchema = z.object({
@@ -71,7 +72,8 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
       phone: formData.get('phone') as string,
       aadhaar: formData.get('aadhaar') as string,
       address: formData.get('address') as string,
-      documentUrl: formData.get('documentUrl') as string | undefined,
+      aadhaarPhotoUrl: formData.get('aadhaarPhotoUrl') as string | undefined,
+      customerPhotoUrl: formData.get('customerPhotoUrl') as string | undefined,
     }
 
     const parsed = customerSchema.parse(data)

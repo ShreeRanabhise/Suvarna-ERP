@@ -15,7 +15,44 @@ export default function CreateCustomerDialog() {
     setLoading(true)
 
     const formData = new FormData(event.currentTarget)
+    
     try {
+      // Handle file uploads first
+      const aadhaarFile = formData.get('aadhaarPhoto') as File | null
+      const customerFile = formData.get('customerPhoto') as File | null
+      
+      formData.delete('aadhaarPhoto')
+      formData.delete('customerPhoto')
+
+      async function uploadFile(file: File) {
+        const ext = file.name.split('.').pop() || 'jpg'
+        const res = await fetch('/api/kyc/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extension: ext })
+        })
+        if (!res.ok) throw new Error('Failed to get upload URL')
+        const { uploadUrl, filePath } = await res.json()
+        
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type }
+        })
+        if (!uploadRes.ok) throw new Error('Failed to upload file to storage')
+        return filePath
+      }
+
+      if (aadhaarFile && aadhaarFile.size > 0) {
+        const path = await uploadFile(aadhaarFile)
+        formData.set('aadhaarPhotoUrl', path)
+      }
+      
+      if (customerFile && customerFile.size > 0) {
+        const path = await uploadFile(customerFile)
+        formData.set('customerPhotoUrl', path)
+      }
+
       const res = await createCustomer(formData)
       if (!res.success) {
         setError(res.error)
@@ -41,7 +78,7 @@ export default function CreateCustomerDialog() {
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card p-6 rounded-modal border border-border shadow-modal max-w-md w-full mx-4 relative">
+          <div className="bg-card p-6 rounded-modal border border-border shadow-modal max-w-lg w-full mx-4 relative">
             <button 
               onClick={() => setIsOpen(false)}
               className="absolute top-5 right-5 text-foreground-muted hover:text-foreground transition-colors"
@@ -113,6 +150,28 @@ export default function CreateCustomerDialog() {
                   rows={2}
                   className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-foreground">Aadhaar Photo</label>
+                  <input
+                    type="file"
+                    name="aadhaarPhoto"
+                    accept="image/*,.pdf"
+                    className="text-sm text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-background-secondary file:text-foreground hover:file:bg-border transition-colors cursor-pointer border border-border rounded-md px-2 py-1.5 bg-background"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-foreground">Customer Photo</label>
+                  <input
+                    type="file"
+                    name="customerPhoto"
+                    accept="image/*"
+                    className="text-sm text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-background-secondary file:text-foreground hover:file:bg-border transition-colors cursor-pointer border border-border rounded-md px-2 py-1.5 bg-background"
+                  />
+                </div>
               </div>
 
               {error && (

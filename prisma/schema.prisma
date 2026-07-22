@@ -100,8 +100,9 @@ model Customer {
   email       String?  // Optional email
   aadhaar     String   // Required Aadhaar
   pan         String?
-  address     String   // Required Address
-  documentUrl String?
+  address          String   // Required Address
+  aadhaarPhotoUrl  String?
+  customerPhotoUrl String?
   isDeleted   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
