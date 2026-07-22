@@ -11,7 +11,17 @@ export default async function DashboardLayout({
   const dbUser = await getCachedUser()
 
   if (!dbUser) {
-    redirect("/login")
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="max-w-md p-8 text-center bg-card rounded-2xl border shadow-sm">
+          <h2 className="text-2xl font-bold text-foreground">Profile Not Linked</h2>
+          <p className="mt-4 text-muted-foreground">
+            You are logged in, but your user profile has not been linked in the database. 
+            Please ensure your Supabase User UID matches the <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">authId</code> in the database.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (dbUser.role === 'SUPER_ADMIN') {

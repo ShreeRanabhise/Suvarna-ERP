@@ -39,7 +39,7 @@ export default async function LoansPage({
   }
 
   if (activeTab !== 'ALL') {
-    whereClause.status = activeTab
+    whereClause.status = activeTab as Prisma.EnumLoanStatusFilter | "ACTIVE" | "CLOSED" | "OVERDUE" | "AUCTION" | "RENEWED"
   }
 
   if (query) {
@@ -141,7 +141,7 @@ export default async function LoansPage({
                 </tr>
               ) : (
                 loans.map((loan) => {
-                  const balances = calculateLoanBalances(loan as any)
+                  const balances = calculateLoanBalances(loan as unknown as import('@/lib/loan-utils').Loan)
                   return (
                   <tr key={loan.id} className="hover:bg-slate-50/40 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">

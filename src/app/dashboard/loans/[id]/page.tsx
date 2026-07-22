@@ -32,8 +32,7 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
     redirect('/dashboard/loans')
   }
 
-  // Calculate live balances
-  const balances = calculateLoanBalances(loan as any)
+  const balances = calculateLoanBalances(loan as unknown as import('@/lib/loan-utils').Loan)
   const pledge = loan.pledgedItems[0]
 
   // Balances are used in the client forms
