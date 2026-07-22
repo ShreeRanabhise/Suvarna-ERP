@@ -30,11 +30,11 @@ function MetricSkeleton() {
 }
 
 function ChartSkeleton() {
-  return <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-4 h-96 animate-pulse"></div>
+  return <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-3 h-96 animate-pulse"></div>
 }
 
 function ListSkeleton() {
-  return <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-3 h-96 animate-pulse"></div>
+  return <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-4 h-96 animate-pulse"></div>
 }
 
 async function KpiMetrics({ shopId }: { shopId: string }) {
@@ -73,7 +73,7 @@ async function KpiMetrics({ shopId }: { shopId: string }) {
         </div>
         <div className="mt-2">
           <div className="text-2xl font-bold font-mono text-foreground">{totalCustomers}</div>
-          <p className="text-xs text-foreground-muted mt-1">Active in database</p>
+          <p className="text-xs text-foreground-muted mt-1">Registered customers</p>
         </div>
       </div>
 
@@ -86,26 +86,26 @@ async function KpiMetrics({ shopId }: { shopId: string }) {
         </div>
         <div className="mt-2">
           <div className="text-2xl font-bold font-mono text-foreground">{activeLoansCount}</div>
-          <p className="text-xs text-foreground-muted mt-1">Currently outstanding</p>
+          <p className="text-xs text-foreground-muted mt-1">Current open loans</p>
         </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card shadow-subtle p-5 flex flex-col justify-between">
         <div className="flex items-center justify-between pb-3">
-          <span className="text-sm font-medium text-foreground-secondary">Outstanding Balance</span>
+          <span className="text-sm font-medium text-foreground-secondary">Remaining Loans</span>
           <div className="h-8 w-8 rounded-md bg-primary-light flex items-center justify-center text-primary">
             <TrendingUp className="h-4 w-4" />
           </div>
         </div>
         <div className="mt-2">
           <div className="text-2xl font-bold font-mono text-primary">{formatINR(outstandingBalance)}</div>
-          <p className="text-xs text-foreground-muted mt-1">Active capital in market</p>
+          <p className="text-xs text-foreground-muted mt-1">Total unpaid amount</p>
         </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card shadow-subtle p-5 flex flex-col justify-between">
         <div className="flex items-center justify-between pb-3">
-          <span className="text-sm font-medium text-foreground-secondary">Gold Reserved</span>
+          <span className="text-sm font-medium text-foreground-secondary">Vault Gold</span>
           <div className="h-8 w-8 rounded-md bg-background-secondary flex items-center justify-center text-foreground-muted">
             <Scale className="h-4 w-4" />
           </div>
@@ -118,14 +118,14 @@ async function KpiMetrics({ shopId }: { shopId: string }) {
 
       <div className="rounded-lg border border-border bg-card shadow-subtle p-5 flex flex-col justify-between">
         <div className="flex items-center justify-between pb-3">
-          <span className="text-sm font-medium text-foreground-secondary">Due / Overdue</span>
+          <span className="text-sm font-medium text-foreground-secondary">Due & Overdue</span>
           <div className="h-8 w-8 rounded-md bg-destructive/10 flex items-center justify-center text-destructive">
             <AlertCircle className="h-4 w-4" />
           </div>
         </div>
         <div className="mt-2">
           <div className="text-2xl font-bold font-mono text-destructive">{dueThisMonthCount}</div>
-          <p className="text-xs text-foreground-muted mt-1">Expiring by end of month</p>
+          <p className="text-xs text-foreground-muted mt-1">Loans expiring soon</p>
         </div>
       </div>
     </div>
@@ -148,45 +148,41 @@ async function MonthlyDisbursements({ shopId }: { shopId: string }) {
     const year = date.getFullYear()
     const monthNumber = date.getMonth()
 
-    const totalAmount = disbursements
+    const totalMonthAmount = disbursements
       .filter(d => {
         const dDate = new Date(d.startDate)
         return dDate.getMonth() === monthNumber && dDate.getFullYear() === year
       })
-      .reduce((sum, d) => sum + Number(d.principalAmount), 0)
+      .reduce((acc, curr) => acc + Number(curr.principalAmount), 0)
 
-    return { month: monthName, amount: totalAmount }
+    return { month: monthName, amount: totalMonthAmount }
   })
 
+  const maxVal = Math.max(...monthlyDisbursementsData.map(d => d.amount), 1)
+
   return (
-    <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-4 flex flex-col justify-between">
+    <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-3 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
           <div>
-            <h3 className="font-semibold text-lg text-foreground tracking-tight">Monthly Disbursements</h3>
-            <p className="text-xs text-foreground-muted mt-1">Valuation trend over the last 6 months</p>
+            <h3 className="font-semibold text-lg text-foreground tracking-tight">Loans Given (Last 6 Months)</h3>
+            <p className="text-xs text-foreground-muted mt-1">Monthly total loan amounts issued</p>
           </div>
-          <span className="text-xs font-medium text-foreground-secondary bg-background-secondary px-2 py-1 rounded-md border border-border">
-            Trend chart
-          </span>
         </div>
         
-        <div className="space-y-4">
-          {monthlyDisbursementsData.map((data, idx) => {
-            const maxVal = Math.max(...monthlyDisbursementsData.map(m => m.amount), 1)
-            const percentage = (data.amount / maxVal) * 100
+        <div className="h-48 flex items-end gap-4 pt-4">
+          {monthlyDisbursementsData.map((d, i) => {
+            const heightPercent = Math.max((d.amount / maxVal) * 100, 4)
             return (
-              <div key={idx} className="flex items-center gap-4">
-                <span className="w-10 text-xs font-medium text-foreground-secondary">{data.month}</span>
-                <div className="flex-1 h-2.5 bg-background-secondary rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary rounded-full" 
-                    style={{ width: `${percentage}%` }}
-                  ></div>
-                </div>
-                <span className="w-24 text-right text-sm font-mono font-semibold text-foreground">
-                  ₹{data.amount.toLocaleString('en-IN')}
+              <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                <span className="text-[10px] font-mono text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                  ₹{(d.amount / 1000).toFixed(0)}k
                 </span>
+                <div 
+                  className="w-full bg-primary/20 hover:bg-primary rounded-t-md transition-all duration-300 relative"
+                  style={{ height: `${heightPercent}%` }}
+                />
+                <span className="text-xs font-medium text-foreground-secondary">{d.month}</span>
               </div>
             )
           })}
@@ -201,22 +197,22 @@ async function RecentCollections({ shopId }: { shopId: string }) {
     where: { loan: { shopId, isDeleted: false } },
     include: { loan: { include: { customer: true } } },
     orderBy: { paymentDate: 'desc' },
-    take: 5
+    take: 7
   })
 
   return (
-    <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-3 flex flex-col justify-between">
+    <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-4 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
           <div>
-            <h3 className="font-semibold text-lg text-foreground tracking-tight">Recent Collections</h3>
-            <p className="text-xs text-foreground-muted mt-1">Real-time payment logs</p>
+            <h3 className="font-semibold text-lg text-foreground tracking-tight">Recent Payments</h3>
+            <p className="text-xs text-foreground-muted mt-1">Latest transactions recorded</p>
           </div>
           <Link 
             href="/dashboard/reports"
-            className="text-primary hover:text-primary-hover transition-colors text-xs font-medium flex items-center gap-1 bg-primary-light px-2 py-1 rounded-md"
+            className="text-primary hover:text-primary-hover transition-colors text-xs font-medium flex items-center gap-1 bg-primary-light px-2.5 py-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <span>Ledger</span>
+            <span>View Reports</span>
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -238,7 +234,7 @@ async function RecentCollections({ shopId }: { shopId: string }) {
                       {payment.loan.customer.firstName} {payment.loan.customer.lastName}
                     </p>
                     <p className="text-[10px] text-foreground-muted font-mono mt-0.5 uppercase">
-                      ID: {payment.loan.loanNumber}
+                      Loan #{payment.loan.loanNumber}
                     </p>
                   </div>
                 </div>
@@ -266,18 +262,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-      {/* Welcome Banner Card */}
-      <div className="rounded-lg border border-border bg-card shadow-subtle p-8 flex flex-col gap-2">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-semibold text-primary bg-primary-light px-2 py-1 rounded-md">
-            Gold Loan SaaS
-          </span>
-        </div>
+      {/* Dashboard Title Header */}
+      <div className="rounded-lg border border-border bg-card shadow-subtle p-6 flex flex-col gap-1">
         <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">
-          Welcome back to your workspace
+          Dashboard
         </h2>
-        <p className="text-sm text-foreground-secondary max-w-2xl">
-          Monitor and manage active gold ledger valuations, customer collateral parameters, and real-time payments allocations in one unified platform.
+        <p className="text-sm text-foreground-secondary">
+          Welcome back. Here is an overview of your gold loan business today.
         </p>
       </div>
       

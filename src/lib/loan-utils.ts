@@ -90,3 +90,19 @@ export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date())
     daysSinceLast: daysSinceLast.toNumber(),
   }
 }
+
+export function formatNumericCustomerId(id: string): string {
+  if (!id) return '00000000'
+  const digits = id
+    .toLowerCase()
+    .replace(/[^0-9a-f]/g, '')
+    .split('')
+    .map(c => {
+      const code = c.charCodeAt(0)
+      if (code >= 48 && code <= 57) return c
+      if (code >= 97 && code <= 102) return String(code - 96)
+      return '0'
+    })
+    .join('')
+  return digits.slice(0, 8)
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { CustomerService } from '@/services/customer.service'
 import { LoanService } from '@/services/loan.service'
+import { validateVerhoeff, validatePAN } from '@/lib/validation'
 
 export async function GET() {
   const results: string[] = []
@@ -45,6 +46,16 @@ export async function GET() {
     
     const owner = shop.users[0]
     results.push(`✅ Shop Created: ${shop.id} | Owner: ${owner.id}`)
+
+    // 1b. Test Aadhaar Verhoeff & PAN Validation Primitives
+    results.push('1b. Testing Verhoeff Aadhaar & PAN Validation Primitives...')
+    const isValidVerhoeff = validateVerhoeff('299433989146') // Known valid Verhoeff number
+    const isInvalidVerhoeff = validateVerhoeff('111122223333')
+    const isValidPAN = validatePAN('ABCDE1234F')
+    const isInvalidPAN = validatePAN('12345ABCDE')
+    
+    results.push(`   -> Valid Verhoeff check: ${isValidVerhoeff ? 'PASSED ✅' : 'FAILED ❌'}`)
+    results.push(`   -> Valid PAN check: ${isValidPAN ? 'PASSED ✅' : 'FAILED ❌'}`)
 
     // 2. Onboard Customer & Loan via Service (Test LTV limits)
     results.push('2. Testing Customer Onboarding & LTV Limits...')

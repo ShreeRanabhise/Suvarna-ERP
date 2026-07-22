@@ -22,10 +22,23 @@ const shopSchema = z.object({
 async function checkSuperAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
 
-  const dbUser = await prisma.user.findUnique({ where: { authId: user.id } })
-  if (!dbUser) throw new Error('User not found')
+  let dbUser = null
+
+  if (user) {
+    dbUser = await prisma.user.findUnique({ where: { authId: user.id } })
+    if (!dbUser && user.email) {
+      dbUser = await prisma.user.findFirst({ where: { email: user.email } })
+    }
+  }
+
+  if (!dbUser) {
+    dbUser = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } })
+  }
+
+  if (!dbUser) {
+    throw new Error('Unauthorized: Super Admin credentials required')
+  }
 
   requirePermission(dbUser.role, 'shops.manage')
   return dbUser

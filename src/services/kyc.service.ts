@@ -1,64 +1,129 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import fs from 'fs/promises'
+import path from 'path'
+
+const getAdminClient = () => {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return null
+  }
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+}
 
 const BUCKET_NAME = 'kyc-documents'
 
 export class KYCService {
-  /**
-   * Generates a unique path and creates a signed upload URL for a client to upload a document directly to Supabase.
-   * Note: The client must perform a PUT request to the returned signed URL.
-   */
-  static async generateUploadUrl(shopId: string, customerId: string, extension: string = 'pdf') {
-    const supabase = await createClient()
-    
-    // Structure: shopId/customerId/uuid.pdf
-    const filePath = `${shopId}/${customerId}/${crypto.randomUUID()}.${extension}`
-
-    // Ensure we are authenticated (or we must rely on bucket policies, but server-side generated URLs are safer)
-    // We generate a pre-signed upload URL
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .createSignedUploadUrl(filePath)
-
-    if (error || !data) {
-      throw new Error(`Failed to generate upload URL: ${error?.message}`)
-    }
-
-    return {
-      uploadUrl: data.signedUrl,
-      filePath
+  private static async ensureBucketExists(supabase: NonNullable<ReturnType<typeof getAdminClient>>) {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets()
+      const exists = buckets?.some(b => b.name === BUCKET_NAME)
+      if (!exists) {
+        await supabase.storage.createBucket(BUCKET_NAME, {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB
+        })
+      }
+    } catch {
+      // Ignore bucket creation errors if already exists
     }
   }
 
   /**
-   * Generates a signed URL to read a document. 
-   * The URL is only valid for 60 seconds (or 3600 seconds) to ensure security.
+   * Rebuilt Document Storage Logic:
+   * Writes uploaded document files to local public storage (/uploads/kyc/{shopId}/)
+   * and syncs with Supabase Storage if configured.
+   * Returns a clean, direct public web URL.
    */
-  static async getSignedReadUrl(filePath: string, expiresIn: number = 60) {
-    const supabase = await createClient()
-    
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .createSignedUrl(filePath, expiresIn)
+  static async uploadFileDirect(shopId: string, customerId: string, file: File) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const fileName = `kyc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
+    const buffer = Buffer.from(await file.arrayBuffer())
 
-    if (error || !data) {
-      throw new Error(`Failed to generate read URL: ${error?.message}`)
+    // 1. Save locally to public/uploads/kyc/{shopId}/
+    const relativeDirPath = `/uploads/kyc/${shopId}`
+    const absoluteDirPath = path.join(process.cwd(), 'public', 'uploads', 'kyc', shopId)
+    await fs.mkdir(absoluteDirPath, { recursive: true })
+
+    const absoluteFilePath = path.join(absoluteDirPath, fileName)
+    await fs.writeFile(absoluteFilePath, buffer)
+
+    const publicUrl = `${relativeDirPath}/${fileName}`
+
+    // 2. Optionally sync with Supabase Storage
+    const supabase = getAdminClient()
+    if (supabase) {
+      try {
+        await this.ensureBucketExists(supabase)
+        const storagePath = `${shopId}/${fileName}`
+        await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(storagePath, buffer, {
+            contentType: file.type || 'image/jpeg',
+            upsert: true
+          })
+      } catch {
+        // Local file is preserved even if Supabase sync fails
+      }
     }
 
-    return data.signedUrl
+    return publicUrl
   }
 
   /**
-   * Deletes a KYC document from the bucket.
+   * Generates a signed or direct URL to read a document.
+   */
+  static async getSignedReadUrl(filePath: string, expiresIn: number = 3600) {
+    if (!filePath) return ''
+
+    // If it's already a public web path or full HTTP URL, return as-is
+    if (filePath.startsWith('/') || filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:')) {
+      return filePath
+    }
+
+    const supabase = getAdminClient()
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .createSignedUrl(filePath, expiresIn)
+
+        if (!error && data?.signedUrl) {
+          return data.signedUrl
+        }
+      } catch {
+        // Fallback to local upload path
+      }
+    }
+
+    return `/uploads/kyc/${filePath}`
+  }
+
+  /**
+   * Deletes a KYC document from local disk and Supabase bucket.
    */
   static async deleteDocument(filePath: string) {
-    const supabase = await createClient()
-    
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([filePath])
+    if (!filePath) return true
 
-    if (error) {
-      throw new Error(`Failed to delete document: ${error.message}`)
+    // Remove local file if path is relative
+    if (filePath.startsWith('/uploads/kyc/')) {
+      try {
+        const absolutePath = path.join(process.cwd(), 'public', filePath)
+        await fs.unlink(absolutePath)
+      } catch {
+        // File may already be deleted
+      }
+    }
+
+    const supabase = getAdminClient()
+    if (supabase) {
+      try {
+        const key = filePath.replace(/^\/uploads\/kyc\//, '')
+        await supabase.storage.from(BUCKET_NAME).remove([key])
+      } catch {
+        // Ignore error on deletion
+      }
     }
     return true
   }

@@ -12,6 +12,7 @@ import { UserService } from '@/services/user.service'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 import { requirePermission } from '@/lib/permissions'
+import { nameSchema, phoneSchema, aadhaarSchema, panSchema, addressSchema } from '@/lib/validation'
 
 export type ActionResult<T = void> = 
   | { success: true; data?: T } 
@@ -19,13 +20,15 @@ export type ActionResult<T = void> =
 
 // Validation Schemas
 const customerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(50).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
-  lastName: z.string().min(1, 'Last name is required').max(50).regex(/^[a-zA-Z\s]*$/, 'Only letters and spaces allowed in name').trim(),
-  phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
-  aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
-  address: z.string().min(5, 'Please provide a complete address').max(250).trim(),
-  aadhaarPhotoUrl: z.string().url().max(500).optional().nullable(),
-  customerPhotoUrl: z.string().url().max(500).optional().nullable(),
+  firstName: nameSchema,
+  lastName: z.string().trim().max(50).optional().or(z.literal('')),
+  phone: phoneSchema,
+  aadhaar: aadhaarSchema,
+  pan: panSchema.optional().or(z.literal('')),
+  address: addressSchema,
+  aadhaarPhotoUrl: z.string().max(2000).optional().nullable().or(z.literal('')),
+  customerPhotoUrl: z.string().max(2000).optional().nullable().or(z.literal('')),
+  panPhotoUrl: z.string().max(2000).optional().nullable().or(z.literal('')),
 })
 
 const loanSchema = z.object({
@@ -37,7 +40,7 @@ const loanSchema = z.object({
   weightGrams: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
   purity: z.string().min(1, 'Purity is required').max(20).trim(),
   valuation: z.number().min(0.01, 'Valuation must be greater than 0').max(20000000),
-  itemImageUrl: z.string().url().optional().nullable(),
+  itemImageUrl: z.string().max(500).optional().nullable().or(z.literal('')),
 })
 
 
@@ -66,19 +69,67 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
     const { shopId, userId, role, branchId, auditMeta } = await getTenantContext()
     requirePermission(role, 'customer.create')
     await enforceRateLimit('createCustomer', userId)
-    
+
+    let rawFullName = (formData.get('fullName') as string)?.trim()
+    const legacyFirstName = (formData.get('firstName') as string)?.trim()
+    const legacyLastName = (formData.get('lastName') as string)?.trim()
+
+    if (!rawFullName && (legacyFirstName || legacyLastName)) {
+      rawFullName = `${legacyFirstName || ''} ${legacyLastName || ''}`.trim()
+    }
+
+    if (!rawFullName) {
+      throw new Error("Enter customer's full name.")
+    }
+
+    // Collapse multiple spaces into one & format Title Case
+    const cleanFullName = rawFullName.replace(/\s+/g, ' ').trim()
+    const nameWords = cleanFullName.split(' ')
+
+    let firstName = cleanFullName
+    let lastName = ''
+
+    if (nameWords.length > 1) {
+      lastName = nameWords.pop() || ''
+      firstName = nameWords.join(' ')
+    }
+
+    const phone = (formData.get('phone') as string)?.replace(/\D/g, '').trim()
+    const rawAadhaar = (formData.get('aadhaar') as string)?.replace(/\D/g, '').trim()
+    const rawPan = (formData.get('pan') as string)?.trim()?.toUpperCase() || ''
+
+    const aadhaarFrontUrl = formData.get('aadhaarFrontUrl') as string | undefined
+    const aadhaarBackUrl = formData.get('aadhaarBackUrl') as string | undefined
+    const customerPhotoUrl = formData.get('customerPhotoUrl') as string | undefined
+    const panPhotoUrl = formData.get('panPhotoUrl') as string | undefined
+
+    if (rawPan && (!panPhotoUrl || panPhotoUrl.trim() === '')) {
+      throw new Error('PAN photo is required because PAN number is provided.')
+    }
+
+    let combinedAadhaarUrl = formData.get('aadhaarPhotoUrl') as string | undefined
+    if (aadhaarFrontUrl || aadhaarBackUrl) {
+      combinedAadhaarUrl = JSON.stringify({
+        front: aadhaarFrontUrl || '',
+        back: aadhaarBackUrl || '',
+        frontUrl: aadhaarFrontUrl || '',
+        backUrl: aadhaarBackUrl || ''
+      })
+    }
+
     const data = {
-      firstName: formData.get('firstName') as string,
-      lastName: formData.get('lastName') as string,
-      phone: formData.get('phone') as string,
-      aadhaar: formData.get('aadhaar') as string,
-      address: formData.get('address') as string,
-      aadhaarPhotoUrl: formData.get('aadhaarPhotoUrl') as string | undefined,
-      customerPhotoUrl: formData.get('customerPhotoUrl') as string | undefined,
+      firstName,
+      lastName,
+      phone,
+      aadhaar: rawAadhaar,
+      pan: rawPan || null,
+      address: (formData.get('address') as string)?.trim(),
+      aadhaarPhotoUrl: combinedAadhaarUrl,
+      customerPhotoUrl,
+      panPhotoUrl,
     }
 
     const parsed = customerSchema.parse(data)
-    
     const idempotencyKey = (formData.get('idempotencyKey') as string) || undefined
 
     const customer = await CustomerService.createCustomer(
@@ -86,6 +137,11 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
       userId,
       {
         ...parsed,
+        lastName: parsed.lastName || '',
+        pan: parsed.pan || null,
+        aadhaarPhotoUrl: parsed.aadhaarPhotoUrl || null,
+        customerPhotoUrl: parsed.customerPhotoUrl || null,
+        panPhotoUrl: parsed.panPhotoUrl || null,
         branchId: role === 'STAFF' ? branchId : null,
       },
       idempotencyKey,
@@ -99,14 +155,76 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
   }
 }
 
+export async function updateCustomerKYCStatus(
+  customerId: string, 
+  status: 'VERIFIED' | 'UNVERIFIED' | 'REJECTED'
+): Promise<ActionResult> {
+  try {
+    const { shopId, userId, role } = await getTenantContext()
+    
+    const dbUser = await prisma.user.findUnique({ where: { authId: userId } })
+    const verifierName = dbUser ? `${dbUser.name || 'Owner'} (${role})` : `Verifier (${role})`
+
+    await prisma.customer.update({
+      where: { id: customerId, shopId },
+      data: {
+        panVerificationStatus: status,
+        panVerifiedAt: status === 'VERIFIED' ? new Date() : null,
+        panVerifiedBy: status === 'VERIFIED' ? verifierName : null
+      }
+    })
+
+    revalidatePath(`/dashboard/customers/${customerId}`)
+    revalidatePath('/dashboard/customers')
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update KYC verification status' }
+  }
+}
+
 export async function createLoan(formData: FormData): Promise<ActionResult<{ loanId: string }>> {
   try {
     const { shopId, userId, role, branchId, auditMeta } = await getTenantContext()
     requirePermission(role, 'loan.create')
     await enforceRateLimit('createLoan', userId)
     
+    let rawCustomerId = (formData.get('customerId') as string)?.trim()
+    if (!rawCustomerId) {
+      throw new Error('Customer ID is required for loan assignment.')
+    }
+
+    // Resolve Customer ID by UUID, Phone, or 8-digit numeric Customer ID
+    let resolvedCustomerId = rawCustomerId
+    const directCustomer = await prisma.customer.findFirst({
+      where: {
+        shopId,
+        isDeleted: false,
+        OR: [
+          { id: rawCustomerId },
+          { phone: rawCustomerId }
+        ]
+      },
+      select: { id: true }
+    })
+
+    if (directCustomer) {
+      resolvedCustomerId = directCustomer.id
+    } else {
+      const { formatNumericCustomerId } = await import('@/lib/loan-utils')
+      const shopCustomers = await prisma.customer.findMany({
+        where: { shopId, isDeleted: false },
+        select: { id: true }
+      })
+      const matched = shopCustomers.find(c => formatNumericCustomerId(c.id) === rawCustomerId)
+      if (matched) {
+        resolvedCustomerId = matched.id
+      } else {
+        throw new Error(`Customer with ID "${rawCustomerId}" was not found.`)
+      }
+    }
+
     const data = {
-      customerId: formData.get('customerId') as string,
+      customerId: resolvedCustomerId,
       principalAmount: Number(formData.get('principalAmount')),
       interestRate: Number(formData.get('interestRate')),
       ltvPercentage: Number(formData.get('ltvPercentage')),
@@ -129,27 +247,96 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
     const result = await LoanService.createLoan(
       shopId,
       userId,
-      parsed,
+      {
+        ...parsed,
+        itemImageUrl: parsed.itemImageUrl || null,
+      },
       role === 'STAFF' ? branchId : null,
       idempotencyKey,
       auditMeta
     )
 
     revalidatePath('/dashboard/loans')
+    revalidatePath('/dashboard/customers')
     return { success: true, data: { loanId: result.loanId } }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
+export async function lookupCustomer(query: string): Promise<ActionResult<{
+  customerId: string
+  fullName: string
+  phone: string
+  kycStatus: string
+  numericId: string
+}>> {
+  try {
+    const { shopId } = await getTenantContext()
+    const cleanQuery = query.trim()
+    if (!cleanQuery) return { success: false, error: 'Enter a Customer ID or Mobile number' }
+
+    const { formatNumericCustomerId } = await import('@/lib/loan-utils')
+
+    const directCustomer = await prisma.customer.findFirst({
+      where: {
+        shopId,
+        isDeleted: false,
+        OR: [
+          { id: cleanQuery },
+          { phone: cleanQuery }
+        ]
+      },
+      select: { id: true, firstName: true, lastName: true, phone: true, panVerificationStatus: true }
+    })
+
+    if (directCustomer) {
+      return {
+        success: true,
+        data: {
+          customerId: directCustomer.id,
+          fullName: `${directCustomer.firstName} ${directCustomer.lastName}`.trim(),
+          phone: directCustomer.phone,
+          kycStatus: directCustomer.panVerificationStatus || 'VERIFIED',
+          numericId: formatNumericCustomerId(directCustomer.id)
+        }
+      }
+    }
+
+    // Try matching by 8-digit numeric Customer ID
+    const shopCustomers = await prisma.customer.findMany({
+      where: { shopId, isDeleted: false },
+      select: { id: true, firstName: true, lastName: true, phone: true, panVerificationStatus: true }
+    })
+
+    const matched = shopCustomers.find(c => formatNumericCustomerId(c.id) === cleanQuery)
+    if (matched) {
+      return {
+        success: true,
+        data: {
+          customerId: matched.id,
+          fullName: `${matched.firstName} ${matched.lastName}`.trim(),
+          phone: matched.phone,
+          kycStatus: matched.panVerificationStatus || 'VERIFIED',
+          numericId: formatNumericCustomerId(matched.id)
+        }
+      }
+    }
+
+    return { success: false, error: `No customer found matching "${cleanQuery}"` }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to lookup customer' }
+  }
+}
+
 
 const onboardingSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
-  phone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit Indian phone number'),
-  email: z.string().email('Invalid email').max(100).optional().or(z.literal('')),
-  aadhaar: z.string().regex(/^[0-9]{12}$/, 'Must be a valid 12-digit Aadhaar number'),
-  address: z.string().min(5, 'Please provide a complete address').max(250).trim(),
-  documentUrl: z.string().url().max(500).optional().nullable(),
+  name: nameSchema,
+  phone: phoneSchema,
+  email: z.string().trim().toLowerCase().optional().or(z.literal('')),
+  aadhaar: aadhaarSchema,
+  address: addressSchema,
+  documentUrl: z.string().max(500).optional().nullable().or(z.literal('')),
   goldItemName: z.string().min(1, 'Gold item name is required').max(100).trim(),
   goldWeight: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
   goldPurity: z.string().min(1, 'Purity is required').max(20).trim(),
@@ -203,8 +390,8 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
 }
 
 const staffSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
-  email: z.string().email('Invalid email address').max(100),
+  name: nameSchema,
+  email: z.string().trim().toLowerCase().email('Invalid email address').max(100),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   branchId: z.string().uuid().optional().or(z.literal('')),
 })
@@ -414,5 +601,55 @@ export async function deleteCustomer(customerId: string): Promise<ActionResult> 
     return { success: true }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
+  }
+}
+
+export async function changePassword(formData: FormData): Promise<ActionResult> {
+  try {
+    const currentPassword = formData.get('currentPassword') as string
+    const newPassword = formData.get('newPassword') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return { success: false, error: 'Please fill in all password fields.' }
+    }
+
+    if (newPassword.length < 6) {
+      return { success: false, error: 'New password must be at least 6 characters long.' }
+    }
+
+    if (newPassword !== confirmPassword) {
+      return { success: false, error: 'New passwords do not match.' }
+    }
+
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user || !user.email) {
+      return { success: false, error: 'Authentication session expired. Please log in again.' }
+    }
+
+    // Verify current password via re-authentication
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    })
+
+    if (signInError) {
+      return { success: false, error: 'Current password is incorrect.' }
+    }
+
+    // Update to new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    return { success: true }
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update password' }
   }
 }

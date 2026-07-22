@@ -27,8 +27,9 @@ export default function DeleteStaffButton({ staffId, staffName }: { staffId: str
     <button
       onClick={handleDelete}
       disabled={isPending}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       title="Remove Staff Member"
+      aria-label={`Remove staff member ${staffName}`}
     >
       <Trash2 className="h-4 w-4" />
     </button>

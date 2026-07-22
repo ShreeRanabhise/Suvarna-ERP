@@ -34,7 +34,8 @@ export default function ExportButton({
   return (
     <button 
       onClick={handleExport}
-      className="inline-flex items-center gap-2 border border-border hover:bg-background-secondary bg-background text-foreground-secondary px-4 h-9 rounded-md font-medium text-sm transition-colors shadow-sm"
+      className="inline-flex items-center gap-2 border border-border hover:bg-background-secondary bg-background text-foreground-secondary px-4 h-9 rounded-md font-medium text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      aria-label={buttonText}
     >
       <Download className="h-4 w-4 text-foreground-muted" />
       <span>{buttonText}</span>

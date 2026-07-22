@@ -46,7 +46,7 @@ export default function OnboardCustomerDialog() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in overflow-y-auto">
           <div className="bg-card p-6 rounded-modal border border-border shadow-modal max-w-lg w-full mx-4 my-8 max-h-[90vh] overflow-y-auto relative">
             <button 
               onClick={() => setIsOpen(false)}
@@ -75,9 +75,12 @@ export default function OnboardCustomerDialog() {
                     <input
                       name="name"
                       required
-                      pattern="[a-zA-Z\s]+"
-                      title="Only letters and spaces allowed"
+                      minLength={2}
+                      maxLength={100}
+                      pattern="[a-zA-Z\s'-]+"
+                      title="Name must be between 2 and 100 characters containing only letters, spaces, hyphens, and apostrophes"
                       placeholder="e.g. Amit Sharma"
+                      onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-Z\s'-]/g, '') }}
                       className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
                     />
                   </div>
@@ -87,9 +90,11 @@ export default function OnboardCustomerDialog() {
                       name="phone"
                       required
                       type="tel"
-                      pattern="[0-9]{10}"
-                      title="Must be a valid 10-digit phone number"
+                      maxLength={10}
+                      pattern="[6-9][0-9]{9}"
+                      title="Must be a valid 10-digit mobile number starting with 6-9"
                       placeholder="e.g. 9876543210"
+                      onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10) }}
                       className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled font-mono"
                     />
                   </div>
@@ -105,6 +110,7 @@ export default function OnboardCustomerDialog() {
                       pattern="[0-9]{12}"
                       title="Must be a valid 12-digit Aadhaar number"
                       placeholder="123456789012"
+                      onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 12) }}
                       className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled font-mono"
                     />
                   </div>

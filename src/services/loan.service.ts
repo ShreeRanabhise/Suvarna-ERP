@@ -381,6 +381,8 @@ export class LoanService {
           await tx.idempotencyLog.create({
             data: {
               key: idempotencyKey,
+              shopId,
+              userId,
               action: 'CREATE_LOAN',
               payload: JSON.stringify({ loanId: newLoan.id })
             }

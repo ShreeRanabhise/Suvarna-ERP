@@ -8,20 +8,20 @@ import { KYCService } from '@/services/kyc.service'
  */
 export async function POST(req: NextRequest) {
   try {
-    const { shopId, userId } = await getTenantContext()
-    
-    // In a real scenario, you might pass customerId in the body to organize folders
-    const body = await req.json()
-    const customerId = body.customerId || 'temp'
-    const extension = body.extension || 'pdf'
+    const { shopId } = await getTenantContext()
+    const formData = await req.formData()
+    const file = formData.get('file') as File | null
+    const customerId = (formData.get('customerId') as string) || 'temp'
 
-    // Generate the signed URL
-    const { uploadUrl, filePath } = await KYCService.generateUploadUrl(shopId, customerId, extension)
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided for upload' }, { status: 400 })
+    }
 
-    return NextResponse.json({ uploadUrl, filePath })
+    const filePath = await KYCService.uploadFileDirect(shopId, customerId, file)
+    return NextResponse.json({ filePath })
   } catch (error: unknown) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate upload URL' },
+      { error: error instanceof Error ? error.message : 'Failed to upload document' },
       { status: 400 }
     )
   }

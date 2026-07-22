@@ -28,8 +28,11 @@ export default async function SuperAdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">Platform Overview</h2>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+          <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">Super Admin</h2>
+          <p className="text-sm text-foreground-secondary">Manage shop tenant accounts and platform subscriptions</p>
+        </div>
         <CreateShopDialog />
       </div>
 
@@ -41,7 +44,7 @@ export default async function SuperAdminDashboard() {
             <DollarSign className="h-4 w-4 text-foreground-muted" />
           </div>
           <div className="text-2xl font-bold font-mono text-foreground">₹{totalRevenue.toLocaleString('en-IN')}</div>
-          <p className="text-xs text-foreground-muted mt-1">Annualized platform run-rate</p>
+          <p className="text-xs text-foreground-muted mt-1">Annualized platform revenue</p>
         </div>
 
         <div className="rounded-lg border border-border bg-card shadow-subtle p-5">

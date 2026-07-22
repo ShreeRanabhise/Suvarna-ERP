@@ -58,8 +58,8 @@ const config: Config = {
             modal: '20px'
   		},
         fontFamily: {
-            sans: ['var(--font-inter)'],
-            mono: ['var(--font-jetbrains-mono)'],
+            sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         }
   	}
   },

@@ -11,8 +11,11 @@ export class CustomerService {
       lastName: string
       phone: string
       aadhaar: string
+      pan?: string | null
       address: string
-      documentUrl?: string
+      aadhaarPhotoUrl?: string | null
+      customerPhotoUrl?: string | null
+      panPhotoUrl?: string | null
       branchId?: string | null
     },
     idempotencyKey?: string,
@@ -49,6 +52,10 @@ export class CustomerService {
         data: {
           ...customerData,
           shopId,
+          panVerificationStatus: 'VERIFIED',
+          panUploadedAt: new Date(),
+          panVerifiedAt: new Date(),
+          panVerifiedBy: 'Auto-Verified on Creation',
         }
       })
 
@@ -61,6 +68,8 @@ export class CustomerService {
           phone: customerData.phone,
           email: null,
           aadhaar: customerData.aadhaar,
+          pan: customerData.pan || null,
+          panPhotoUrl: customerData.panPhotoUrl || null,
           address: customerData.address,
           changedById: userId,
           reason: 'Initial creation'
@@ -102,8 +111,10 @@ export class CustomerService {
     if (error.code === 'P2002') {
       const target = error.meta?.target as string[] | string
       if (typeof target === 'string' && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+      if (typeof target === 'string' && target.includes('pan')) throw new Error('A customer with this PAN already exists in your shop.')
       if (typeof target === 'string' && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
       if (Array.isArray(target) && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+      if (Array.isArray(target) && target.includes('pan')) throw new Error('A customer with this PAN already exists in your shop.')
       if (Array.isArray(target) && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
       throw new Error('A customer with these unique details already exists.')
     }

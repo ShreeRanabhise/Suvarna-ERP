@@ -103,6 +103,11 @@ model Customer {
   address          String   // Required Address
   aadhaarPhotoUrl  String?
   customerPhotoUrl String?
+  panPhotoUrl      String?
+  panVerificationStatus String @default("VERIFIED")
+  panUploadedAt    DateTime?
+  panVerifiedAt    DateTime?
+  panVerifiedBy    String?
   isDeleted   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -114,6 +119,7 @@ model Customer {
 
   @@index([shopId])
   @@index([branchId])
+  @@index([shopId, pan])
   @@unique([shopId, aadhaar])
   @@unique([shopId, phone])
 }
@@ -260,6 +266,8 @@ model CustomerKYCVersion {
   phone       String
   email       String?
   aadhaar     String
+  pan         String?
+  panPhotoUrl String?
   address     String
   changedById String
   changedAt   DateTime @default(now())
