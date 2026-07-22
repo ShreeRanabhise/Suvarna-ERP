@@ -27,6 +27,30 @@ export default function CreateLoanDialog({
 
     const formData = new FormData(event.currentTarget)
     try {
+      const itemImageFile = formData.get('itemImage') as File | null
+      const customerId = formData.get('customerId') as string
+      formData.delete('itemImage')
+
+      if (itemImageFile && itemImageFile.size > 0) {
+        const ext = itemImageFile.name.split('.').pop() || 'jpg'
+        const res = await fetch('/api/kyc/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extension: ext, customerId })
+        })
+        if (!res.ok) throw new Error('Failed to get upload URL')
+        
+        const { uploadUrl, filePath } = await res.json()
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: itemImageFile,
+          headers: { 'Content-Type': itemImageFile.type }
+        })
+        
+        if (!uploadRes.ok) throw new Error('Failed to upload file to storage')
+        formData.set('itemImageUrl', filePath)
+      }
+
       const res = await createLoan(formData)
       if (!res.success) {
         setError(res.error)
@@ -128,6 +152,16 @@ export default function CreateLoanDialog({
                     className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
                   />
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-foreground">Item Photo (Optional)</label>
+                <input
+                  type="file"
+                  name="itemImage"
+                  accept="image/*"
+                  className="text-sm text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-background-secondary file:text-foreground hover:file:bg-border transition-colors cursor-pointer border border-border rounded-md px-2 py-1.5 bg-background"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

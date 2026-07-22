@@ -291,6 +291,7 @@ export class LoanService {
       weightGrams: number
       purity: string
       valuation: number
+      itemImageUrl?: string | null
     },
     branchId?: string | null,
     idempotencyKey?: string,
@@ -332,7 +333,8 @@ export class LoanService {
                 name: loanData.itemName,
                 weightGrams: loanData.weightGrams,
                 purity: loanData.purity,
-                valuation: loanData.valuation
+                valuation: loanData.valuation,
+                imageUrl: loanData.itemImageUrl
               }
             }
           }

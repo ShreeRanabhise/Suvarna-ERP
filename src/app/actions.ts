@@ -37,6 +37,7 @@ const loanSchema = z.object({
   weightGrams: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
   purity: z.string().min(1, 'Purity is required').max(20).trim(),
   valuation: z.number().min(0.01, 'Valuation must be greater than 0').max(20000000),
+  itemImageUrl: z.string().url().optional().nullable(),
 })
 
 
@@ -113,6 +114,7 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
       weightGrams: Number(formData.get('weightGrams')),
       purity: formData.get('purity') as string,
       valuation: Number(formData.get('valuation')),
+      itemImageUrl: formData.get('itemImageUrl') as string | undefined,
     }
     const idempotencyKey = formData.get('idempotencyKey') as string | undefined
 
