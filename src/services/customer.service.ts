@@ -15,7 +15,8 @@ export class CustomerService {
       documentUrl?: string
       branchId?: string | null
     },
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    auditMeta?: { ipAddress: string; userAgent: string }
   ) {
     const prisma = getTenantPrisma(shopId)
     const safeKey = idempotencyKey || randomUUID()
@@ -73,7 +74,9 @@ export class CustomerService {
           action: 'CREATE_CUSTOMER',
           entity: 'CUSTOMER',
           entityId: newCustomer.id,
-          details: { name: customerData.firstName }
+          details: { name: customerData.firstName },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
 
@@ -108,7 +111,7 @@ export class CustomerService {
   }
 }
 
-  static async deleteCustomer(shopId: string, userId: string, customerId: string) {
+  static async deleteCustomer(shopId: string, userId: string, customerId: string, auditMeta?: { ipAddress: string; userAgent: string }) {
     const prisma = getTenantPrisma(shopId)
 
     const customer = await prisma.customer.findFirst({
@@ -145,7 +148,9 @@ export class CustomerService {
           action: 'DELETE_CUSTOMER',
           entity: 'CUSTOMER',
           entityId: customerId,
-          details: { name: customer.firstName, cascadedLoans: customer.loans.length }
+          details: { name: customer.firstName, cascadedLoans: customer.loans.length },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
     })
@@ -172,7 +177,8 @@ export class CustomerService {
       goldPurity: string
       valuation: number
     },
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    auditMeta?: { ipAddress: string; userAgent: string }
   ) {
     const prisma = getTenantPrisma(shopId)
     const correlationId = randomUUID()
@@ -292,7 +298,9 @@ export class CustomerService {
             action: 'ONBOARD_CUSTOMER_WITH_LOAN',
             entity: 'CUSTOMER',
             entityId: newCustomer.id,
-            details: { loanId: newLoan.id, loanNumber }
+            details: { loanId: newLoan.id, loanNumber },
+            ipAddress: auditMeta?.ipAddress,
+            userAgent: auditMeta?.userAgent,
           }
         })
 

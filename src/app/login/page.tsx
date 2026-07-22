@@ -9,25 +9,25 @@ export default async function LoginPage(
   const searchParams = await props.searchParams
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8F9FB] px-6 py-12">
-      <div className="w-full max-w-md luxury-card rounded-2xl bg-white p-8 shadow-sm">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background-secondary px-6 py-12">
+      <div className="w-full max-w-sm rounded-lg bg-card p-8 shadow-dropdown border border-border">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center shadow-md mx-auto mb-4">
-            <Sparkles className="h-5 w-5 text-white" />
+          <div className="h-10 w-10 rounded-md bg-primary text-primary-foreground flex items-center justify-center shadow-subtle mx-auto mb-4">
+            <Sparkles className="h-5 w-5" />
           </div>
-          <h1 className="text-2xl font-bold font-heading text-slate-900 leading-none">Suvarna ERP</h1>
-          <p className="text-xs text-muted-foreground mt-2">Sign in to your Gold Loan Management Workspace</p>
+          <h1 className="text-xl font-bold font-sans text-foreground leading-none">Suvarna ERP</h1>
+          <p className="text-sm text-foreground-secondary mt-2">Sign in to your workspace</p>
         </div>
 
         {/* Action Form */}
-        <form className="flex flex-col gap-4" action={login}>
+        <form className="flex flex-col gap-5" action={login}>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider" htmlFor="email">
+            <label className="text-sm font-medium text-foreground" htmlFor="email">
               Email Address
             </label>
             <input
-              className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
+              className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
               name="email"
               type="email"
               placeholder="you@example.com"
@@ -36,11 +36,11 @@ export default async function LoginPage(
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider" htmlFor="password">
+            <label className="text-sm font-medium text-foreground" htmlFor="password">
               Password
             </label>
             <input
-              className="rounded-xl px-3 py-2 border border-slate-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-transparent text-sm text-slate-800 outline-none transition"
+              className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
               type="password"
               name="password"
               placeholder="••••••••"
@@ -48,12 +48,12 @@ export default async function LoginPage(
             />
           </div>
 
-          <button className="bg-primary text-white hover:gold-gradient-hover py-2.5 rounded-xl font-bold text-sm transition shadow-sm mt-3">
+          <button className="bg-primary text-primary-foreground hover:bg-primary-hover py-2 rounded-md font-medium text-sm transition-colors shadow-subtle mt-2">
             Sign In
           </button>
 
           {searchParams?.message && (
-            <div className="mt-2 p-3 bg-destructive/10 text-destructive text-xs font-bold text-center rounded-xl border border-destructive/20 uppercase tracking-wide">
+            <div className="mt-2 p-3 bg-destructive/10 text-destructive text-sm font-medium text-center rounded-md border border-destructive/20">
               {searchParams.message}
             </div>
           )}

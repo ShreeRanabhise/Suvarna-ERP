@@ -15,6 +15,7 @@ const shopSchema = z.object({
   whatsappAddon: z.boolean().default(false),
   ownerEmail: z.string().email('Invalid email address').max(100),
   ownerName: z.string().min(1, 'Owner name is required').max(100).trim(),
+  ownerPassword: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 // Helper to verify Super Admin role
@@ -41,6 +42,7 @@ export async function createShop(formData: FormData): Promise<ActionResult<{ sho
       whatsappAddon: formData.get('whatsappAddon') === 'true',
       ownerEmail: formData.get('ownerEmail') as string,
       ownerName: formData.get('ownerName') as string,
+      ownerPassword: formData.get('ownerPassword') as string,
     }
 
     const parsed = shopSchema.parse(data)

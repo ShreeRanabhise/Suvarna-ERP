@@ -9,6 +9,7 @@ export interface Payment {
   paymentDate: Date | string
   paymentMode: 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
   referenceId: string | null
+  status?: 'COMPLETED' | 'REVERSED'
   createdAt: Date | string
   updatedAt: Date | string
 }
@@ -41,10 +42,10 @@ export function calculateLoanBalances(loan: Loan, targetDate: Date = new Date())
   let interestPaidTotal = new Decimal(0)
   let principalPaidTotal = new Decimal(0)
 
-  // Sort payments chronologically
-  const sortedPayments = [...(loan.payments || [])].sort(
-    (a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
-  )
+  // Sort payments chronologically, excluding REVERSED payments
+  const sortedPayments = [...(loan.payments || [])]
+    .filter(p => p.status !== 'REVERSED')
+    .sort((a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime())
 
   for (const payment of sortedPayments) {
     const paymentDate = new Date(payment.paymentDate)

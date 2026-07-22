@@ -20,9 +20,9 @@ export default async function CustomersPage({
   const rawQuery = search?.query
   const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
 
-  const page = parseInt((search?.page as string) || '1', 10)
+  const cursor = Array.isArray(search?.cursor) ? search.cursor[0] : search?.cursor
+  const direction = Array.isArray(search?.direction) ? search.direction[0] : search?.direction || 'next'
   const pageSize = 10
-  const skip = (page - 1) * pageSize
 
   const whereClause: Prisma.CustomerWhereInput = {
     shopId: dbUser.shopId,
@@ -42,36 +42,55 @@ export default async function CustomersPage({
     ]
   }
 
-  const [customers, totalCount] = await Promise.all([
-    prisma.customer.findMany({
-      where: whereClause,
-      include: {
-        loans: {
-          where: { isDeleted: false }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: pageSize
-    }),
-    prisma.customer.count({ where: whereClause })
-  ])
+  const takeCount = direction === 'prev' ? -(pageSize + 1) : (pageSize + 1)
+
+  const rawCustomers = await prisma.customer.findMany({
+    where: whereClause,
+    include: {
+      loans: {
+        where: { isDeleted: false }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: takeCount,
+    skip: cursor ? 1 : 0,
+    ...(cursor ? { cursor: { id: cursor } } : {})
+  })
   
-  const totalPages = Math.ceil(totalCount / pageSize)
+  let hasNextPage = false
+  let hasPrevPage = false
+  let customers = [...rawCustomers]
+
+  if (direction === 'next' || !cursor) {
+    if (customers.length > pageSize) {
+      hasNextPage = true
+      customers.pop()
+    }
+    hasPrevPage = !!cursor
+  } else if (direction === 'prev') {
+    if (customers.length > pageSize) {
+      hasPrevPage = true
+      customers.shift()
+    }
+    hasNextPage = true
+  }
+
+  const firstCursor = customers.length > 0 ? customers[0].id : null
+  const lastCursor = customers.length > 0 ? customers[customers.length - 1].id : null
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h2 className="text-3xl font-heading tracking-tight">Customers</h2>
-          <p className="text-xs text-muted-foreground mt-1">Manage and onboard active client profiles</p>
+          <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">Customers</h2>
+          <p className="text-sm text-foreground-secondary mt-1">Manage and onboard active client profiles</p>
         </div>
         <OnboardCustomerDialog />
       </div>
 
-      <div className="luxury-card rounded-2xl overflow-hidden">
+      <div className="rounded-lg border border-border bg-card shadow-subtle overflow-hidden mt-4">
         {/* Table Filters & Search */}
-        <div className="p-5 border-b flex items-center justify-between gap-4 bg-slate-50/50">
+        <div className="p-4 border-b border-border flex items-center justify-between gap-4 bg-background-secondary/50">
           <div className="w-full max-w-md">
             <SearchInput placeholder="Search by name, phone, or Aadhaar..." />
           </div>
@@ -79,19 +98,19 @@ export default async function CustomersPage({
 
         {/* Table View */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <table className="w-full text-sm text-left whitespace-nowrap">
+            <thead className="bg-background border-b border-border">
               <tr>
-                <th className="px-6 py-4">Client Detail</th>
-                <th className="px-6 py-4">Phone Number</th>
-                <th className="px-6 py-4">Active Gold Loans</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Client Detail</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Phone Number</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Active Gold Loans</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-slate-400 italic">
+                  <td colSpan={4} className="text-center py-12 text-foreground-muted italic">
                     No customers found matching search criteria.
                   </td>
                 </tr>
@@ -99,41 +118,41 @@ export default async function CustomersPage({
                 customers.map((customer) => {
                   const activeLoans = customer.loans.filter(l => l.status === 'ACTIVE').length
                   return (
-                    <tr key={customer.id} className="hover:bg-slate-50/40 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={customer.id} className="hover:bg-background-secondary transition-colors">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border">
-                            <User className="h-4 w-4" />
+                          <div className="h-9 w-9 rounded-md bg-secondary flex items-center justify-center text-foreground font-semibold text-sm">
+                            {customer.firstName[0]}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-800 block text-sm">
+                            <span className="font-semibold text-foreground block text-sm">
                               {customer.firstName} {customer.lastName}
                             </span>
-                            <span className="text-[10px] text-muted-foreground block font-mono">
+                            <span className="text-[10px] text-foreground-muted block font-mono mt-0.5">
                               ID: {customer.id.slice(0, 8)}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-600">
+                      <td className="px-5 py-4 font-mono text-sm text-foreground">
                         {customer.phone}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-medium ${
                           activeLoans > 0 
-                            ? 'bg-primary/10 text-primary border border-primary/20' 
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            ? 'bg-primary-light text-primary border border-primary/20' 
+                            : 'bg-background-secondary text-foreground-secondary border border-border'
                         }`}>
                           {activeLoans} Active
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <td className="px-5 py-4 text-right flex justify-end gap-2">
                         <Link 
                           href={`/dashboard/customers/${customer.id}`} 
-                          className="inline-flex items-center gap-1 border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+                          className="inline-flex items-center gap-1.5 border border-border hover:bg-background-secondary text-foreground-secondary px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
                         >
                           <span>Profile</span>
-                          <ArrowRight className="h-3 w-3 text-slate-400" />
+                          <ArrowRight className="h-3 w-3" />
                         </Link>
                         {dbUser.role !== 'STAFF' && (
                           <DeleteCustomerButton 
@@ -151,26 +170,26 @@ export default async function CustomersPage({
         </div>
         
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
-            <span className="text-xs text-slate-500 font-medium">
-              Page {page} of {totalPages}
+        {(hasPrevPage || hasNextPage) && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-background-secondary/50">
+            <span className="text-xs text-foreground-secondary font-medium">
+              Navigation
             </span>
             <div className="flex items-center gap-2">
-              {page > 1 && (
+              {hasPrevPage && (
                 <Link 
-                  href={`/dashboard/customers?page=${page - 1}${query ? `&query=${query}` : ''}`}
-                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                  href={`/dashboard/customers?cursor=${firstCursor}&direction=prev${query ? `&query=${query}` : ''}`}
+                  className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-background-secondary transition-colors text-xs font-medium flex items-center gap-1"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" /> Previous
                 </Link>
               )}
-              {page < totalPages && (
+              {hasNextPage && (
                 <Link 
-                  href={`/dashboard/customers?page=${page + 1}${query ? `&query=${query}` : ''}`}
-                  className="p-1.5 rounded-lg border bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                  href={`/dashboard/customers?cursor=${lastCursor}&direction=next${query ? `&query=${query}` : ''}`}
+                  className="px-3 py-1.5 rounded-md border border-border bg-card text-foreground hover:bg-background-secondary transition-colors text-xs font-medium flex items-center gap-1"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  Next <ChevronRight className="h-4 w-4" />
                 </Link>
               )}
             </div>

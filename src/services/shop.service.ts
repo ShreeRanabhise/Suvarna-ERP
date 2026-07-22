@@ -13,12 +13,13 @@ export class ShopService {
     whatsappAddon: boolean
     ownerEmail: string
     ownerName: string
+    ownerPassword: string
   }) {
     // 1. Create User in Supabase Auth via Admin API
     const adminAuth = createAdminClient()
     const { data: authData, error: authError } = await adminAuth.auth.admin.createUser({
       email: data.ownerEmail,
-      password: 'Welcome@123', // Default password for new shops
+      password: data.ownerPassword,
       email_confirm: true,
       user_metadata: { name: data.ownerName }
     })

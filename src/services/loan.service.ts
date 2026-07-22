@@ -2,7 +2,6 @@ import { getTenantPrisma } from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
-import { Decimal } from 'decimal.js'
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   ACTIVE: ['OVERDUE', 'CLOSED', 'RENEWED'],
@@ -31,7 +30,8 @@ export class LoanService {
     paymentMode: 'CASH' | 'UPI' | 'BANK' | 'CHEQUE',
     referenceId: string | null,
     currentVersion: number,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    auditMeta?: { ipAddress: string; userAgent: string }
   ) {
     const prisma = getTenantPrisma(shopId)
     const correlationId = randomUUID()
@@ -170,7 +170,9 @@ export class LoanService {
               isFullyPaid,
               previousVersion: loan.version,
               newVersion: loan.version + 1
-            }
+            },
+            ipAddress: auditMeta?.ipAddress,
+            userAgent: auditMeta?.userAgent,
           }
         })
 
@@ -205,7 +207,8 @@ export class LoanService {
     userId: string,
     loanId: string,
     status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED',
-    currentVersion: number
+    currentVersion: number,
+    auditMeta?: { ipAddress: string; userAgent: string }
   ) {
     const prisma = getTenantPrisma(shopId)
     const correlationId = randomUUID()
@@ -258,7 +261,9 @@ export class LoanService {
                 status, 
                 previousVersion: loan.version,
                 newVersion: loan.version + 1
-            }
+            },
+            ipAddress: auditMeta?.ipAddress,
+            userAgent: auditMeta?.userAgent,
           }
         })
 
@@ -288,7 +293,8 @@ export class LoanService {
       valuation: number
     },
     branchId?: string | null,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    auditMeta?: { ipAddress: string; userAgent: string }
   ) {
     const prisma = getTenantPrisma(shopId)
     const correlationId = randomUUID()
@@ -364,6 +370,8 @@ export class LoanService {
             action: 'CREATE_LOAN',
             entity: 'LOAN',
             entityId: newLoan.id,
+            ipAddress: auditMeta?.ipAddress,
+            userAgent: auditMeta?.userAgent,
           }
         })
 
@@ -386,6 +394,186 @@ export class LoanService {
       const message = error instanceof Error ? error.message : 'Unknown error'
       logger.error('CREATE_LOAN_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error
+    }
+  }
+  static async rollbackPayment(
+    shopId: string,
+    userId: string,
+    paymentId: string,
+    auditMeta?: { ipAddress: string; userAgent: string }
+  ) {
+    const prisma = getTenantPrisma(shopId)
+    const correlationId = randomUUID()
+
+    try {
+      logger.info('ROLLBACK_PAYMENT_START', `Initiating rollback for payment ${paymentId}`, { tenantId: shopId, userId, correlationId })
+
+      const result = await prisma.$transaction(async (tx) => {
+        const payment = await tx.payment.findFirst({
+          where: { id: paymentId, loan: { shopId } },
+          include: { loan: { include: { payments: true } } }
+        })
+        
+        if (!payment) throw new Error('Payment not found or unauthorized')
+        if (payment.status === 'REVERSED') throw new Error('Payment is already reversed')
+
+        const loan = payment.loan
+        const principalPaid = Number(payment.principalPaid)
+        const interestPaid = Number(payment.interestPaid)
+
+        // Calculate current balances BEFORE rollback
+        const currentBalances = calculateLoanBalances(loan as any)
+
+        // Determine new loan status
+        // If loan was CLOSED, reversing a principal payment makes it ACTIVE again.
+        let targetStatus = loan.status
+        if (loan.status === 'CLOSED' && principalPaid > 0) {
+          targetStatus = 'ACTIVE'
+        }
+
+        // Update Payment status to REVERSED
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: 'REVERSED',
+            reversedById: userId,
+            reversedAt: new Date()
+          }
+        })
+
+        // Update Loan status and version
+        await tx.loan.update({
+          where: { id: loan.id },
+          data: {
+            status: targetStatus,
+            endDate: targetStatus === 'ACTIVE' ? null : loan.endDate,
+            version: { increment: 1 }
+          }
+        })
+
+        // Create compensating Reversing Ledger Entries (DEBIT to counteract CREDIT)
+        if (interestPaid > 0) {
+          await tx.ledgerEntry.create({
+            data: {
+              shopId,
+              loanId: loan.id,
+              paymentId: payment.id,
+              category: 'INTEREST',
+              type: 'DEBIT', // Reverse of CREDIT
+              amount: interestPaid,
+              balanceAfter: currentBalances.interestDue + interestPaid,
+              performedBy: userId,
+              isReversal: true,
+              idempotencyKey: `reverse-interest-${payment.id}`
+            }
+          })
+        }
+
+        if (principalPaid > 0) {
+          await tx.ledgerEntry.create({
+            data: {
+              shopId,
+              loanId: loan.id,
+              paymentId: payment.id,
+              category: 'PRINCIPAL',
+              type: 'DEBIT', // Reverse of CREDIT
+              amount: principalPaid,
+              balanceAfter: currentBalances.outstandingPrincipal + principalPaid,
+              performedBy: userId,
+              isReversal: true,
+              idempotencyKey: `reverse-principal-${payment.id}`
+            }
+          })
+        }
+
+        // State history if status changed
+        if (targetStatus !== loan.status) {
+          await tx.loanStateHistory.create({
+            data: {
+              loanId: loan.id,
+              fromStatus: loan.status,
+              toStatus: targetStatus,
+              changedById: userId,
+              details: `Payment ${paymentId} reversed`
+            }
+          })
+        }
+
+        // Audit Logging
+        await tx.auditLog.create({
+          data: {
+            shopId,
+            userId,
+            action: 'ROLLBACK_PAYMENT',
+            entity: 'PAYMENT',
+            entityId: payment.id,
+            details: {
+              loanId: loan.id,
+              principalReversed: principalPaid,
+              interestReversed: interestPaid,
+              previousStatus: loan.status,
+              newStatus: targetStatus
+            },
+            ipAddress: auditMeta?.ipAddress,
+            userAgent: auditMeta?.userAgent,
+          }
+        })
+
+        return { loanId: loan.id, targetStatus }
+      })
+
+      logger.info('ROLLBACK_PAYMENT_SUCCESS', `Successfully rolled back payment ${paymentId}`, { tenantId: shopId, userId, correlationId })
+      return result
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('ROLLBACK_PAYMENT_FAILED', message, error, { tenantId: shopId, userId, correlationId })
+      throw error
+    }
+  }
+
+  static async reconcileLoan(shopId: string, loanId: string) {
+    const prisma = getTenantPrisma(shopId)
+    
+    // Fetch loan, all payments, and all ledger entries
+    const loan = await prisma.loan.findFirst({
+      where: { id: loanId, shopId },
+      include: { payments: true }
+    })
+
+    if (!loan) throw new Error('Loan not found')
+
+    const ledgerEntries = await prisma.ledgerEntry.findMany({
+      where: { loanId, shopId },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    // Compute expected balances purely from ledger entries (sum of DEBITs - sum of CREDITs for PRINCIPAL)
+    let ledgerPrincipal = new Decimal(0)
+    for (const entry of ledgerEntries) {
+      if (entry.category === 'PRINCIPAL') {
+        if (entry.type === 'DEBIT') {
+          ledgerPrincipal = ledgerPrincipal.plus(entry.amount)
+        } else if (entry.type === 'CREDIT') {
+          ledgerPrincipal = ledgerPrincipal.minus(entry.amount)
+        }
+      }
+    }
+
+    // Compute balance from loan utility (which uses payments and ignores REVERSED)
+    const utilBalances = calculateLoanBalances(loan as any)
+
+    // Verify
+    const diff = Math.abs(ledgerPrincipal.toNumber() - utilBalances.outstandingPrincipal)
+    const isConsistent = diff < 0.01
+
+    return {
+      loanId,
+      isConsistent,
+      ledgerDerivedPrincipal: ledgerPrincipal.toDecimalPlaces(2).toNumber(),
+      utilDerivedPrincipal: utilBalances.outstandingPrincipal,
+      diff,
+      ledgerEntriesCount: ledgerEntries.length,
+      validPaymentsCount: loan.payments.filter(p => p.status !== 'REVERSED').length
     }
   }
 }

@@ -36,14 +36,14 @@ export function StatusButtons({
             <button 
               onClick={() => handleStatusChange('OVERDUE')}
               disabled={!!loadingAction}
-              className="text-[10px] border border-slate-200 hover:border-destructive/20 bg-white px-2.5 py-1.5 rounded-xl text-destructive hover:bg-destructive/5 font-bold transition disabled:opacity-50"
+              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-destructive hover:bg-destructive/10 font-semibold transition-colors disabled:opacity-50"
             >
               {loadingAction === 'OVERDUE' ? '...' : 'Mark Overdue'}
             </button>
             <button 
               onClick={() => handleStatusChange('AUCTION')}
               disabled={!!loadingAction}
-              className="text-[10px] border border-slate-200 hover:border-orange-500/20 bg-white px-2.5 py-1.5 rounded-xl text-orange-600 hover:bg-orange-50 font-bold transition disabled:opacity-50"
+              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-orange-600 hover:bg-orange-600/10 font-semibold transition-colors disabled:opacity-50"
             >
               {loadingAction === 'AUCTION' ? '...' : 'Send to Auction'}
             </button>
@@ -54,7 +54,7 @@ export function StatusButtons({
           <button 
             onClick={() => handleStatusChange('ACTIVE')}
             disabled={!!loadingAction}
-            className="text-[10px] border border-primary/20 bg-white px-3 py-1.5 rounded-xl text-primary hover:bg-primary/5 font-bold transition disabled:opacity-50"
+            className="text-[10px] border border-border bg-background px-3 py-1.5 rounded-md text-primary hover:bg-primary-light font-semibold transition-colors disabled:opacity-50"
           >
             {loadingAction === 'ACTIVE' ? '...' : 'Revert to Active'}
           </button>

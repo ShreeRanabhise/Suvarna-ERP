@@ -2,7 +2,7 @@ import { getTenantPrisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
 export class BranchService {
-  static async createBranch(shopId: string, userId: string, name: string) {
+  static async createBranch(shopId: string, userId: string, name: string, auditMeta?: { ipAddress: string; userAgent: string }) {
     const prisma = getTenantPrisma(shopId)
 
     const existingBranch = await prisma.branch.findFirst({
@@ -28,7 +28,9 @@ export class BranchService {
           action: 'CREATE_BRANCH',
           entity: 'BRANCH',
           entityId: newBranch.id,
-          details: { name: newBranch.name }
+          details: { name: newBranch.name },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
 
@@ -39,7 +41,7 @@ export class BranchService {
     return branch
   }
 
-  static async deleteBranch(shopId: string, userId: string, branchId: string) {
+  static async deleteBranch(shopId: string, userId: string, branchId: string, auditMeta?: { ipAddress: string; userAgent: string }) {
     const prisma = getTenantPrisma(shopId)
 
     const branch = await prisma.branch.findFirst({
@@ -79,7 +81,9 @@ export class BranchService {
           action: 'DELETE_BRANCH',
           entity: 'BRANCH',
           entityId: branchId,
-          details: { name: branch.name }
+          details: { name: branch.name },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
     })

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 
 export class UserService {
-  static async createStaffMember(shopId: string, adminUserId: string, name: string, email: string, branchId: string | null) {
+  static async createStaffMember(shopId: string, adminUserId: string, name: string, email: string, branchId: string | null, password: string, auditMeta?: { ipAddress: string; userAgent: string }) {
     const prisma = getTenantPrisma(shopId)
 
     const shop = await prisma.shop.findUnique({
@@ -25,7 +25,7 @@ export class UserService {
     const adminAuth = createAdminClient()
     const { data: authData, error: authError } = await adminAuth.auth.admin.createUser({
       email,
-      password: 'Welcome@123',
+      password: password,
       email_confirm: true,
       user_metadata: { name }
     })
@@ -54,7 +54,9 @@ export class UserService {
           action: 'CREATE_STAFF_MEMBER',
           entity: 'USER',
           entityId: newUser.id,
-          details: { email: newUser.email, name: newUser.name, branchId: newUser.branchId }
+          details: { email: newUser.email, name: newUser.name, branchId: newUser.branchId },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
 
@@ -65,7 +67,7 @@ export class UserService {
     return staff
   }
 
-  static async deleteStaffMember(shopId: string, adminUserId: string, staffId: string) {
+  static async deleteStaffMember(shopId: string, adminUserId: string, staffId: string, auditMeta?: { ipAddress: string; userAgent: string }) {
     const prisma = getTenantPrisma(shopId)
 
     const staff = await prisma.user.findFirst({
@@ -94,7 +96,9 @@ export class UserService {
           action: 'DELETE_STAFF_MEMBER',
           entity: 'USER',
           entityId: staffId,
-          details: { email: staff.email, name: staff.name }
+          details: { email: staff.email, name: staff.name },
+          ipAddress: auditMeta?.ipAddress,
+          userAgent: auditMeta?.userAgent,
         }
       })
     })

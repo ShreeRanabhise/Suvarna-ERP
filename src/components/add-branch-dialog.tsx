@@ -33,59 +33,57 @@ export default function AddBranchDialog() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 gold-gradient text-primary-foreground hover:gold-gradient-hover px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+        className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover h-10 px-4 rounded-md font-medium text-sm transition-colors"
       >
-        <Building className="h-4.5 w-4.5" />
+        <Building className="h-4 w-4" />
         <span>Add Branch</span>
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl max-w-md w-full mx-4 relative animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card p-6 rounded-modal border border-border shadow-modal max-w-md w-full mx-4 relative">
             <button 
               onClick={() => setIsOpen(false)}
-              className="absolute top-5 right-5 text-muted-foreground hover:text-foreground bg-secondary/5 hover:bg-secondary/10 p-2 rounded-full transition-colors"
+              className="absolute top-5 right-5 text-foreground-muted hover:text-foreground transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
 
-            <h3 className="text-xl font-bold font-heading mb-6 text-foreground flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Building className="h-5 w-5 text-primary" />
-              </div>
+            <h3 className="text-lg font-semibold mb-6 text-foreground flex items-center gap-2">
+              <Building className="h-5 w-5 text-primary" />
               <span>Create New Branch</span>
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Branch Identifier Name *</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-foreground">Branch Identifier Name *</label>
                 <input
                   name="name"
                   required
                   minLength={3}
                   placeholder="e.g. South Mumbai Branch"
-                  className="rounded-xl px-4 py-3 border border-border focus:border-primary focus:ring-4 focus:ring-primary/10 bg-background text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/50"
+                  className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
                 />
               </div>
 
               {error && (
-                <div className="text-destructive text-xs font-bold bg-destructive/10 border border-destructive/20 p-2.5 rounded-xl uppercase tracking-wide">
+                <div className="text-destructive text-sm font-medium bg-destructive/10 border border-destructive/20 p-3 rounded-md">
                   {error}
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-8">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-5 py-2.5 border border-border hover:bg-secondary/5 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  className="px-4 h-10 border border-border hover:bg-background-secondary rounded-md text-sm font-medium text-foreground-secondary transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2.5 gold-gradient hover:gold-gradient-hover text-primary-foreground rounded-xl text-sm font-bold shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:hover:translate-y-0"
+                  className="px-4 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Adding...' : 'Add Branch'}
                 </button>

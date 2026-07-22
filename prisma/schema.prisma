@@ -34,6 +34,11 @@ enum PaymentMode {
   CHEQUE
 }
 
+enum PaymentStatus {
+  COMPLETED
+  REVERSED
+}
+
 model User {
   id        String   @id @default(uuid())
   authId    String?  @unique
@@ -167,6 +172,9 @@ model Payment {
   paymentMode   PaymentMode @default(CASH)
   referenceId   String?     // For UPI/Bank transfers
   idempotencyKey String?    @unique
+  status        PaymentStatus @default(COMPLETED)
+  reversedById  String?
+  reversedAt    DateTime?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -197,6 +205,8 @@ model AuditLog {
   entity    String   // e.g. LOAN, CUSTOMER
   entityId  String
   details   Json?    // JSON object details
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
 
   shop      Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -230,6 +240,7 @@ model LedgerEntry {
   balanceAfter   Decimal        @db.Decimal(12, 2)
   performedBy    String         // User ID
   idempotencyKey String?        @unique
+  isReversal     Boolean        @default(false)
   createdAt      DateTime       @default(now())
 
   loan           Loan           @relation(fields: [loanId], references: [id], onDelete: Restrict)

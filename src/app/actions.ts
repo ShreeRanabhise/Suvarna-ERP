@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
 import { CustomerService } from '@/services/customer.service'
 import { LoanService } from '@/services/loan.service'
 import { BranchService } from '@/services/branch.service'
@@ -39,7 +40,7 @@ const loanSchema = z.object({
 
 
 // We define a local helper since the imported one might cause cyclic dependencies or different semantics.
-async function getTenantContext() {
+export async function getTenantContext() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
@@ -50,12 +51,17 @@ async function getTenantContext() {
   })
   if (!dbUser || !dbUser.shopId) throw new Error('No tenant associated')
 
-  return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role, branchId: dbUser.branchId }
+  const headersList = await headers()
+  const ipAddress = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
+  const userAgent = headersList.get('user-agent') || 'unknown'
+  const auditMeta = { ipAddress, userAgent }
+
+  return { userId: dbUser.id, shopId: dbUser.shopId, role: dbUser.role, branchId: dbUser.branchId, auditMeta }
 }
 
 export async function createCustomer(formData: FormData): Promise<ActionResult<{ customerId: string }>> {
   try {
-    const { shopId, userId, role, branchId } = await getTenantContext()
+    const { shopId, userId, role, branchId, auditMeta } = await getTenantContext()
     requirePermission(role, 'customer.create')
     await enforceRateLimit('createCustomer', userId)
     
@@ -79,7 +85,8 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
         ...parsed,
         branchId: role === 'STAFF' ? branchId : null,
       },
-      idempotencyKey
+      idempotencyKey,
+      auditMeta
     )
 
     revalidatePath('/dashboard/customers')
@@ -91,7 +98,7 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
 
 export async function createLoan(formData: FormData): Promise<ActionResult<{ loanId: string }>> {
   try {
-    const { shopId, userId, role, branchId } = await getTenantContext()
+    const { shopId, userId, role, branchId, auditMeta } = await getTenantContext()
     requirePermission(role, 'loan.create')
     await enforceRateLimit('createLoan', userId)
     
@@ -120,7 +127,8 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
       userId,
       parsed,
       role === 'STAFF' ? branchId : null,
-      idempotencyKey
+      idempotencyKey,
+      auditMeta
     )
 
     revalidatePath('/dashboard/loans')
@@ -147,7 +155,7 @@ const onboardingSchema = z.object({
 
 export async function onboardCustomerWithLoan(formData: FormData): Promise<ActionResult<{ customerId: string, loanId: string }>> {
   try {
-    const { shopId, userId, role, branchId } = await getTenantContext()
+    const { shopId, userId, role, branchId, auditMeta } = await getTenantContext()
     requirePermission(role, 'customer.create')
     requirePermission(role, 'loan.create')
     await enforceRateLimit('onboardCustomerWithLoan', userId)
@@ -177,7 +185,8 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
       userId,
       customerData,
       loanData,
-      idempotencyKey
+      idempotencyKey,
+      auditMeta
     )
 
     revalidatePath('/dashboard')
@@ -192,17 +201,19 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
 const staffSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100).regex(/^[a-zA-Z\s]+$/, 'Only letters and spaces allowed in name').trim(),
   email: z.string().email('Invalid email address').max(100),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   branchId: z.string().uuid().optional().or(z.literal('')),
 })
 
 export async function createStaffMember(formData: FormData): Promise<ActionResult<{ staffId: string }>> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'users.manage')
 
     const data = {
       name: formData.get('name') as string,
       email: formData.get('email') as string,
+      password: formData.get('password') as string,
       branchId: formData.get('branchId') as string,
     }
 
@@ -213,7 +224,9 @@ export async function createStaffMember(formData: FormData): Promise<ActionResul
       userId,
       parsed.name,
       parsed.email,
-      parsed.branchId || null
+      parsed.branchId || null,
+      parsed.password,
+      auditMeta
     )
 
     revalidatePath('/dashboard/staff')
@@ -225,10 +238,10 @@ export async function createStaffMember(formData: FormData): Promise<ActionResul
 
 export async function deleteStaffMember(staffId: string): Promise<ActionResult> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'users.manage')
 
-    await UserService.deleteStaffMember(shopId, userId, staffId)
+    await UserService.deleteStaffMember(shopId, userId, staffId, auditMeta)
 
     revalidatePath('/dashboard/staff')
     return { success: true }
@@ -243,7 +256,7 @@ const branchSchema = z.object({
 
 export async function createBranch(formData: FormData): Promise<ActionResult<{ branchId: string }>> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'branches.manage')
 
     const shop = await prisma.shop.findUnique({
@@ -260,7 +273,7 @@ export async function createBranch(formData: FormData): Promise<ActionResult<{ b
 
     const parsed = branchSchema.parse(data)
 
-    const branch = await BranchService.createBranch(shopId, userId, parsed.name)
+    const branch = await BranchService.createBranch(shopId, userId, parsed.name, auditMeta)
 
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
@@ -272,10 +285,10 @@ export async function createBranch(formData: FormData): Promise<ActionResult<{ b
 
 export async function deleteBranch(branchId: string): Promise<ActionResult> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'branches.manage')
 
-    await BranchService.deleteBranch(shopId, userId, branchId)
+    await BranchService.deleteBranch(shopId, userId, branchId, auditMeta)
 
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
@@ -302,7 +315,7 @@ function validateStateTransition(from: string, to: string) {
 
 export async function repayLoan(formData: FormData): Promise<ActionResult<{ paymentId: string }>> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'loan.repay')
     await enforceRateLimit('repayLoan', userId)
     
@@ -325,7 +338,8 @@ export async function repayLoan(formData: FormData): Promise<ActionResult<{ paym
       paymentMode,
       referenceId,
       currentVersion,
-      idempotencyKey
+      idempotencyKey,
+      auditMeta
     )
 
     revalidatePath('/dashboard/loans')
@@ -341,10 +355,10 @@ export async function repayLoan(formData: FormData): Promise<ActionResult<{ paym
 
 export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED', currentVersion: number = 0): Promise<ActionResult> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'loan.update')
 
-    const result = await LoanService.updateStatus(shopId, userId, loanId, status, currentVersion)
+    const result = await LoanService.updateStatus(shopId, userId, loanId, status, currentVersion, auditMeta)
 
     revalidatePath('/dashboard/loans')
     revalidatePath(`/dashboard/loans/${loanId}`)
@@ -357,13 +371,40 @@ export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSE
   }
 }
 
+export async function rollbackPayment(paymentId: string): Promise<ActionResult> {
+  try {
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
+    requirePermission(role, 'users.manage') // Assuming OWNER / SUPER_ADMIN can rollback
+
+    const result = await LoanService.rollbackPayment(shopId, userId, paymentId, auditMeta)
+
+    revalidatePath('/dashboard/loans')
+    revalidatePath(`/dashboard/loans/${result.loanId}`)
+    revalidatePath('/dashboard/reports')
+
+    return { success: true }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
+  }
+}
+
+export async function verifyLoanLedger(loanId: string): Promise<ActionResult<{ isConsistent: boolean, diff: number }>> {
+  try {
+    const { shopId } = await getTenantContext()
+    const result = await LoanService.reconcileLoan(shopId, loanId)
+    return { success: true, data: result }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
+  }
+}
+
 
 export async function deleteCustomer(customerId: string): Promise<ActionResult> {
   try {
-    const { shopId, userId, role } = await getTenantContext()
+    const { shopId, userId, role, auditMeta } = await getTenantContext()
     requirePermission(role, 'customer.delete')
 
-    await CustomerService.deleteCustomer(shopId, userId, customerId)
+    await CustomerService.deleteCustomer(shopId, userId, customerId, auditMeta)
 
     revalidatePath('/dashboard/customers')
     return { success: true }

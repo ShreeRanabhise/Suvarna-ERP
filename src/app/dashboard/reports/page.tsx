@@ -101,8 +101,8 @@ export default async function ReportsPage() {
     <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-heading tracking-tight">Reports & Ledger Analytics</h2>
-          <p className="text-xs text-muted-foreground mt-1">Audit historical disbursements, payment flows, and gold vault weights</p>
+          <h2 className="text-2xl font-sans font-semibold tracking-tight text-foreground">Reports & Ledger Analytics</h2>
+          <p className="text-sm text-foreground-secondary mt-1">Audit historical disbursements, payment flows, and gold vault weights</p>
         </div>
         <div>
           <ExportButton 
@@ -117,52 +117,52 @@ export default async function ReportsPage() {
       {/* Analytics KPI cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Disbursements */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-lg shadow-subtle p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Disbursements</h3>
-            <DollarSign className="h-4.5 w-4.5 text-muted-foreground" />
+            <h3 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Total Disbursements</h3>
+            <DollarSign className="h-4.5 w-4.5 text-foreground-secondary" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-extrabold font-mono text-slate-900 leading-none">₹{totalDisbursed.toLocaleString('en-IN')}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Cumulative loans created</p>
+            <div className="text-2xl font-semibold font-mono text-foreground leading-none">₹{totalDisbursed.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-foreground-secondary mt-2">Cumulative loans created</p>
           </div>
         </div>
 
         {/* Collections */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-lg shadow-subtle p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Collections</h3>
+            <h3 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Total Collections</h3>
             <Wallet className="h-4.5 w-4.5 text-success" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-extrabold font-mono text-success leading-none">₹{totalCollected.toLocaleString('en-IN')}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">
+            <div className="text-2xl font-semibold font-mono text-success leading-none">₹{totalCollected.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-foreground-secondary mt-2">
               ₹{totalInterestCollected.toLocaleString('en-IN')} int. | ₹{totalPrincipalCollected.toLocaleString('en-IN')} prin.
             </p>
           </div>
         </div>
 
         {/* Outstanding Active Principal */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-lg shadow-subtle p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outstanding Capital</h3>
+            <h3 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Outstanding Capital</h3>
             <Landmark className="h-4.5 w-4.5 text-primary" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-extrabold font-mono text-primary leading-none">₹{totalOutstandingPrincipal.toLocaleString('en-IN')}</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Current active market principal</p>
+            <div className="text-2xl font-semibold font-mono text-primary leading-none">₹{totalOutstandingPrincipal.toLocaleString('en-IN')}</div>
+            <p className="text-[10px] text-foreground-secondary mt-2">Current active market principal</p>
           </div>
         </div>
 
         {/* Locker Inventory */}
-        <div className="luxury-card rounded-2xl p-6 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-lg shadow-subtle p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between pb-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vault Inventory</h3>
+            <h3 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Vault Inventory</h3>
             <Scale className="h-4.5 w-4.5 text-yellow-600" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-extrabold font-mono text-slate-900 leading-none">{totalGoldLockerGrams.toFixed(2)} g</div>
-            <p className="text-[10px] text-muted-foreground mt-2">Total weight in vault lockers</p>
+            <div className="text-2xl font-semibold font-mono text-foreground leading-none">{totalGoldLockerGrams.toFixed(2)} g</div>
+            <p className="text-[10px] text-foreground-secondary mt-2">Total weight in vault lockers</p>
           </div>
         </div>
       </div>
@@ -170,17 +170,17 @@ export default async function ReportsPage() {
       {/* Grid: Gold Inventory by Purity & NPA Overview */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Gold Inventory Breakdown */}
-        <div className="md:col-span-1 luxury-card rounded-2xl p-6 flex flex-col gap-4">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest border-b pb-3">Vault Stock Purity</h3>
+        <div className="md:col-span-1 bg-card border border-border rounded-lg shadow-subtle p-6 flex flex-col gap-4">
+          <h3 className="text-xs font-semibold text-foreground-secondary uppercase tracking-widest border-b border-border pb-3">Vault Stock Purity</h3>
           
           <div className="flex flex-col gap-3.5">
             {Object.keys(goldInventoryByPurity).length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No gold collateral in lockers.</p>
+              <p className="text-xs text-foreground-muted italic">No gold collateral in lockers.</p>
             ) : (
               Object.entries(goldInventoryByPurity).map(([purity, weight]) => (
-                <div key={purity} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
-                  <span className="font-bold text-primary text-xs">{purity} Standard Gold</span>
-                  <span className="font-mono text-xs text-slate-800 font-bold">{weight.toFixed(2)} g</span>
+                <div key={purity} className="flex justify-between items-center text-sm border-b border-border pb-2.5 last:border-0 last:pb-0">
+                  <span className="font-semibold text-primary text-xs">{purity} Standard Gold</span>
+                  <span className="font-mono text-xs text-foreground font-semibold">{weight.toFixed(2)} g</span>
                 </div>
               ))
             )}
@@ -188,52 +188,52 @@ export default async function ReportsPage() {
         </div>
 
         {/* Overdue/NPA Loans tracker */}
-        <div className="md:col-span-2 luxury-card rounded-2xl overflow-hidden flex flex-col">
-          <div className="p-5 border-b font-semibold font-heading text-sm flex items-center justify-between bg-destructive/[0.03] border-destructive/10">
-            <span className="flex items-center gap-2 text-destructive font-bold">
+        <div className="md:col-span-2 bg-card border border-border rounded-lg shadow-subtle overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-border font-semibold font-sans text-sm flex items-center justify-between bg-destructive/5">
+            <span className="flex items-center gap-2 text-destructive font-semibold">
               <AlertTriangle className="h-4.5 w-4.5" />
               <span>NPA & Overdue Tracker</span>
             </span>
-            <span className="text-[10px] font-extrabold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20 uppercase font-mono">
+            <span className="text-[10px] font-semibold bg-destructive/10 text-destructive px-2 py-0.5 rounded border border-destructive/20 uppercase font-mono">
               {overdueLoans.length} Alerts
             </span>
           </div>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="bg-background border-b border-border">
                 <tr>
-                  <th className="px-6 py-3.5">Contract ID</th>
-                  <th className="px-6 py-3.5">Customer</th>
-                  <th className="px-6 py-3.5">Overdue Principal</th>
-                  <th className="px-6 py-3.5">Total Settlement</th>
-                  <th className="px-6 py-3.5 text-right">Action</th>
+                  <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Contract ID</th>
+                  <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Customer</th>
+                  <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Overdue Principal</th>
+                  <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Total Settlement</th>
+                  <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {overdueLoans.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-slate-400 italic text-xs">
+                    <td colSpan={5} className="text-center py-12 text-foreground-muted italic text-xs">
                       Zero NPAs. All active loans are within their timeline limits!
                     </td>
                   </tr>
                 ) : (
                   overdueLoans.map((loan) => (
-                    <tr key={loan.id} className="hover:bg-slate-50/40 transition-colors">
-                      <td className="px-6 py-3.5 font-mono text-xs font-bold text-destructive">{loan.loanNumber}</td>
-                      <td className="px-6 py-3.5 text-xs text-slate-800 font-semibold">
+                    <tr key={loan.id} className="hover:bg-background-secondary transition-colors">
+                      <td className="px-5 py-4 font-mono text-xs font-semibold text-destructive">{loan.loanNumber}</td>
+                      <td className="px-5 py-4 text-xs text-foreground font-medium">
                         {loan.customer.firstName} {loan.customer.lastName}
                       </td>
-                      <td className="px-6 py-3.5 font-mono text-xs text-slate-600">₹{Number(loan.outstandingPrincipal).toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-3.5 font-mono text-xs text-destructive font-bold">
+                      <td className="px-5 py-4 font-mono text-xs text-foreground-secondary">₹{Number(loan.outstandingPrincipal).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-4 font-mono text-xs text-destructive font-semibold">
                         ₹{Math.round(loan.totalDue).toLocaleString('en-IN')}
                       </td>
-                      <td className="px-6 py-3.5 text-right">
+                      <td className="px-5 py-4 text-right">
                         <Link 
                           href={`/dashboard/loans/${loan.id}`}
-                          className="inline-flex items-center gap-1 border hover:bg-slate-50 text-slate-600 px-3 py-1 rounded-xl text-[11px] font-semibold transition"
+                          className="inline-flex items-center gap-1 border border-border hover:bg-background-secondary text-foreground-secondary px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors"
                         >
                           <span>Manage</span>
-                          <ArrowRight className="h-3 w-3 text-slate-400" />
+                          <ArrowRight className="h-3 w-3 text-foreground-muted" />
                         </Link>
                       </td>
                     </tr>
@@ -246,52 +246,52 @@ export default async function ReportsPage() {
       </div>
 
       {/* Transactions Ledger */}
-      <div className="luxury-card rounded-2xl overflow-hidden">
-        <div className="p-5 border-b font-semibold font-heading text-base text-slate-800 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground" />
+      <div className="bg-card border border-border rounded-lg shadow-subtle overflow-hidden">
+        <div className="p-5 border-b border-border font-semibold font-sans text-base text-foreground flex items-center gap-2">
+          <Activity className="h-4 w-4 text-foreground-secondary" />
           <span>Collections Transaction Ledger</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <table className="w-full text-sm text-left whitespace-nowrap">
+            <thead className="bg-background border-b border-border">
               <tr>
-                <th className="px-6 py-4">Transaction Date</th>
-                <th className="px-6 py-4">Contract Reference</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Amount Paid</th>
-                <th className="px-6 py-4">Principal Component</th>
-                <th className="px-6 py-4">Interest Component</th>
-                <th className="px-6 py-4">Mode</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Transaction Date</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Contract Reference</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Customer</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Amount Paid</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Principal Component</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Interest Component</th>
+                <th className="px-5 py-3 font-medium text-foreground-secondary text-xs uppercase tracking-wider">Mode</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {payments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400 italic">
+                  <td colSpan={7} className="text-center py-12 text-foreground-muted italic">
                     No transactions recorded on this platform yet.
                   </td>
                 </tr>
               ) : (
                 payments.slice(0, 10).map((payment) => (
-                  <tr key={payment.id} className="hover:bg-slate-50/40 transition-colors">
-                    <td className="px-6 py-4 text-xs font-mono text-slate-600">
+                  <tr key={payment.id} className="hover:bg-background-secondary transition-colors">
+                    <td className="px-5 py-4 text-xs font-mono text-foreground-secondary">
                       {new Date(payment.paymentDate).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">{payment.loan.loanNumber}</td>
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-800">
+                    <td className="px-5 py-4 font-mono text-xs font-medium text-foreground">{payment.loan.loanNumber}</td>
+                    <td className="px-5 py-4 text-xs font-medium text-foreground">
                       {payment.loan.customer.firstName} {payment.loan.customer.lastName}
                     </td>
-                    <td className="px-6 py-4 font-bold font-mono text-xs text-slate-800">
+                    <td className="px-5 py-4 font-semibold font-mono text-xs text-foreground">
                       ₹{Number(payment.amountPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-success font-mono text-xs font-bold">
+                    <td className="px-5 py-4 text-success font-mono text-xs font-semibold">
                       ₹{Number(payment.principalPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-orange-600 font-mono text-xs font-bold">
+                    <td className="px-5 py-4 text-orange-600 font-mono text-xs font-semibold">
                       ₹{Number(payment.interestPaid).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 text-xs">
-                      <span className="inline-flex items-center text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                    <td className="px-5 py-4 text-xs">
+                      <span className="inline-flex items-center text-[10px] font-medium uppercase text-foreground-secondary bg-background-secondary px-1.5 py-0.5 rounded font-mono border border-border">
                         {payment.paymentMode}
                       </span>
                     </td>
@@ -301,7 +301,7 @@ export default async function ReportsPage() {
             </tbody>
           </table>
           {payments.length > 10 && (
-            <div className="p-4 text-center border-t border-slate-100 text-xs text-muted-foreground font-medium bg-slate-50/45">
+            <div className="p-4 text-center border-t border-border text-xs text-foreground-secondary font-medium bg-background-secondary">
               Showing recent 10 transactions. Export the collections ledger to review all {payments.length} transactions.
             </div>
           )}

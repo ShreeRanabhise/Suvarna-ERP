@@ -52,18 +52,14 @@ const config: Config = {
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: '8px',
+  			md: '12px',
+  			lg: '16px',
+            modal: '20px'
   		},
         fontFamily: {
             sans: ['var(--font-inter)'],
-            heading: ['var(--font-playfair)'],
             mono: ['var(--font-jetbrains-mono)'],
-        },
-        transitionTimingFunction: {
-            'luxury-bounce': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            'luxury-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',
         }
   	}
   },
