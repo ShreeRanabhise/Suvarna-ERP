@@ -49,7 +49,7 @@ export default async function ReportsPage() {
   loans.forEach(loan => {
     totalDisbursed += Number(loan.principalAmount)
     
-    const balances = calculateLoanBalances(loan as any)
+    const balances = calculateLoanBalances(loan as unknown as import('@/lib/loan-utils').Loan)
     const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + Number(item.weightGrams), 0)
 
     if (loan.status !== 'CLOSED') {

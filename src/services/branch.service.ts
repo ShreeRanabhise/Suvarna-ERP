@@ -28,7 +28,7 @@ export class BranchService {
           action: 'CREATE_BRANCH',
           entity: 'BRANCH',
           entityId: newBranch.id,
-          details: JSON.stringify({ name: newBranch.name })
+          details: { name: newBranch.name }
         }
       })
 
@@ -79,7 +79,7 @@ export class BranchService {
           action: 'DELETE_BRANCH',
           entity: 'BRANCH',
           entityId: branchId,
-          details: JSON.stringify({ name: branch.name })
+          details: { name: branch.name }
         }
       })
     })

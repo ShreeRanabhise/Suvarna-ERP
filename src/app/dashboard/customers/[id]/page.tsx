@@ -41,7 +41,7 @@ export default async function CustomerDetailPage(props: { params: Promise<{ id: 
   let totalPledgedGoldGrams = 0
   
   const processedLoans = customer.loans.map(loan => {
-    const balances = calculateLoanBalances(loan as any)
+    const balances = calculateLoanBalances(loan as unknown as import('@/lib/loan-utils').Loan)
     const goldWeight = loan.pledgedItems.reduce((sum, item) => sum + Number(item.weightGrams), 0)
     
     if (loan.status === 'ACTIVE') {

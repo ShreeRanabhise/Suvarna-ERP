@@ -68,7 +68,7 @@ export class LoanService {
         if (loan.status === 'CLOSED') throw new Error('Loan is already closed')
 
         // Calculate balances
-        const balances = calculateLoanBalances(loan as any)
+        const balances = calculateLoanBalances(loan as unknown as import('@/lib/loan-utils').Loan)
         
         // Exact decimal calculations
         const interestPaid = Math.min(amountPaid, balances.interestDue)
@@ -85,7 +85,8 @@ export class LoanService {
             interestPaid,
             paymentMode,
             referenceId: referenceId || null,
-            paymentDate: new Date()
+            paymentDate: new Date(),
+            idempotencyKey: safeKey
           }
         })
 
@@ -161,7 +162,7 @@ export class LoanService {
             action: 'RECORD_REPAYMENT',
             entity: 'PAYMENT',
             entityId: newPayment.id,
-            details: JSON.stringify({
+            details: {
               loanId,
               amountPaid: actualAmountPaid,
               principalPaid,
@@ -169,7 +170,7 @@ export class LoanService {
               isFullyPaid,
               previousVersion: loan.version,
               newVersion: loan.version + 1
-            })
+            }
           }
         })
 
@@ -253,11 +254,11 @@ export class LoanService {
             action: 'UPDATE_LOAN_STATUS',
             entity: 'LOAN',
             entityId: loanId,
-            details: JSON.stringify({ 
+            details: { 
                 status, 
                 previousVersion: loan.version,
                 newVersion: loan.version + 1
-            })
+            }
           }
         })
 

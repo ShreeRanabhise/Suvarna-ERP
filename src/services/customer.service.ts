@@ -20,7 +20,8 @@ export class CustomerService {
     const prisma = getTenantPrisma(shopId)
     const safeKey = idempotencyKey || randomUUID()
 
-    const result = await prisma.$transaction(async (tx) => {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
       // Idempotency check
       const existingLog = await tx.idempotencyLog.findUnique({
         where: { key: safeKey }
@@ -72,7 +73,7 @@ export class CustomerService {
           action: 'CREATE_CUSTOMER',
           entity: 'CUSTOMER',
           entityId: newCustomer.id,
-          details: JSON.stringify({ name: customerData.firstName })
+          details: { name: customerData.firstName }
         }
       })
 
@@ -94,7 +95,18 @@ export class CustomerService {
     })
 
     return result
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      const target = error.meta?.target as string[] | string
+      if (typeof target === 'string' && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+      if (typeof target === 'string' && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
+      if (Array.isArray(target) && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+      if (Array.isArray(target) && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
+      throw new Error('A customer with these unique details already exists.')
+    }
+    throw error
   }
+}
 
   static async deleteCustomer(shopId: string, userId: string, customerId: string) {
     const prisma = getTenantPrisma(shopId)
@@ -102,18 +114,30 @@ export class CustomerService {
     const customer = await prisma.customer.findFirst({
       where: { id: customerId, shopId, isDeleted: false },
       include: {
-        loans: { where: { isDeleted: false, status: 'ACTIVE' } }
+        loans: { where: { isDeleted: false } }
       }
     })
 
     if (!customer) throw new Error('Customer not found')
-    if (customer.loans.length > 0) throw new Error('Cannot delete customer with active loans')
+    
+    const activeLoans = customer.loans.filter(l => l.status === 'ACTIVE' || l.status === 'OVERDUE')
+    if (activeLoans.length > 0) throw new Error('Cannot delete customer with active or overdue loans')
 
     await prisma.$transaction(async (tx) => {
+      // Soft delete customer
       await tx.customer.update({
         where: { id: customerId },
         data: { isDeleted: true }
       })
+      
+      // Cascade soft delete to loans
+      if (customer.loans.length > 0) {
+        await tx.loan.updateMany({
+          where: { customerId: customerId },
+          data: { isDeleted: true }
+        })
+      }
+
       await tx.auditLog.create({
         data: {
           shopId,
@@ -121,7 +145,7 @@ export class CustomerService {
           action: 'DELETE_CUSTOMER',
           entity: 'CUSTOMER',
           entityId: customerId,
-          details: JSON.stringify({ name: customer.firstName })
+          details: { name: customer.firstName, cascadedLoans: customer.loans.length }
         }
       })
     })
@@ -268,7 +292,7 @@ export class CustomerService {
             action: 'ONBOARD_CUSTOMER_WITH_LOAN',
             entity: 'CUSTOMER',
             entityId: newCustomer.id,
-            details: JSON.stringify({ loanId: newLoan.id, loanNumber })
+            details: { loanId: newLoan.id, loanNumber }
           }
         })
 
@@ -277,7 +301,16 @@ export class CustomerService {
 
       logger.info('ONBOARD_CUSTOMER_SUCCESS', `Successfully onboarded customer ${result.customerId}`, { tenantId: shopId, userId, correlationId })
       return result
-    } catch (error: unknown) {
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        const target = error.meta?.target as string[] | string
+        if (typeof target === 'string' && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+        if (typeof target === 'string' && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
+        if (Array.isArray(target) && target.includes('aadhaar')) throw new Error('A customer with this Aadhaar already exists in your shop.')
+        if (Array.isArray(target) && target.includes('phone')) throw new Error('A customer with this Phone number already exists in your shop.')
+        throw new Error('A customer with these unique details already exists.')
+      }
+      
       const message = error instanceof Error ? error.message : 'Unknown error'
       logger.error('ONBOARD_CUSTOMER_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error

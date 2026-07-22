@@ -108,6 +108,8 @@ model Customer {
 
   @@index([shopId])
   @@index([branchId])
+  @@unique([shopId, aadhaar])
+  @@unique([shopId, phone])
 }
 
 model Loan {
@@ -164,6 +166,7 @@ model Payment {
   paymentDate   DateTime    @default(now())
   paymentMode   PaymentMode @default(CASH)
   referenceId   String?     // For UPI/Bank transfers
+  idempotencyKey String?    @unique
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -193,7 +196,7 @@ model AuditLog {
   action    String   // e.g. CREATE_LOAN, DELETE_CUSTOMER
   entity    String   // e.g. LOAN, CUSTOMER
   entityId  String
-  details   String?  // JSON stringified details
+  details   Json?    // JSON object details
   createdAt DateTime @default(now())
 
   shop      Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)

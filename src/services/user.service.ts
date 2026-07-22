@@ -54,7 +54,7 @@ export class UserService {
           action: 'CREATE_STAFF_MEMBER',
           entity: 'USER',
           entityId: newUser.id,
-          details: JSON.stringify({ email: newUser.email, name: newUser.name, branchId: newUser.branchId })
+          details: { email: newUser.email, name: newUser.name, branchId: newUser.branchId }
         }
       })
 
@@ -94,7 +94,7 @@ export class UserService {
           action: 'DELETE_STAFF_MEMBER',
           entity: 'USER',
           entityId: staffId,
-          details: JSON.stringify({ email: staff.email, name: staff.name })
+          details: { email: staff.email, name: staff.name }
         }
       })
     })
