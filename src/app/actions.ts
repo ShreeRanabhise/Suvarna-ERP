@@ -84,8 +84,8 @@ export async function createCustomer(formData: FormData): Promise<ActionResult<{
 
     revalidatePath('/dashboard/customers')
     return { success: true, data: { customerId: customer.customerId } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -125,8 +125,8 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
 
     revalidatePath('/dashboard/loans')
     return { success: true, data: { loanId: result.loanId } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -184,8 +184,8 @@ export async function onboardCustomerWithLoan(formData: FormData): Promise<Actio
     revalidatePath('/dashboard/customers')
     revalidatePath('/dashboard/loans')
     return { success: true, data: result }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -218,8 +218,8 @@ export async function createStaffMember(formData: FormData): Promise<ActionResul
 
     revalidatePath('/dashboard/staff')
     return { success: true, data: { staffId: staff.id } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -232,8 +232,8 @@ export async function deleteStaffMember(staffId: string): Promise<ActionResult> 
 
     revalidatePath('/dashboard/staff')
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -265,8 +265,8 @@ export async function createBranch(formData: FormData): Promise<ActionResult<{ b
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
     return { success: true, data: { branchId: branch.id } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -280,8 +280,8 @@ export async function deleteBranch(branchId: string): Promise<ActionResult> {
     revalidatePath('/dashboard/branches')
     revalidatePath('/dashboard/staff')
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -334,8 +334,8 @@ export async function repayLoan(formData: FormData): Promise<ActionResult<{ paym
     revalidatePath('/dashboard/reports')
 
     return { success: true, data: { paymentId: result.paymentId } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -352,8 +352,8 @@ export async function updateLoanStatus(loanId: string, status: 'ACTIVE' | 'CLOSE
     revalidatePath('/dashboard/reports')
 
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -367,7 +367,7 @@ export async function deleteCustomer(customerId: string): Promise<ActionResult> 
 
     revalidatePath('/dashboard/customers')
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }

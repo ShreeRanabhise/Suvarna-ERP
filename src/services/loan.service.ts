@@ -192,8 +192,9 @@ export class LoanService {
 
       logger.info('REPAY_LOAN_SUCCESS', `Successfully repaid ${amountPaid} for loan ${loanId}`, { tenantId: shopId, userId, correlationId })
       return result
-    } catch (error: any) {
-      logger.error('REPAY_LOAN_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('REPAY_LOAN_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
   }
@@ -265,8 +266,9 @@ export class LoanService {
 
       logger.info('UPDATE_LOAN_STATUS_SUCCESS', `Successfully updated status of loan ${loanId}`, { tenantId: shopId, userId, correlationId })
       return result
-    } catch (error: any) {
-      logger.error('UPDATE_LOAN_STATUS_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('UPDATE_LOAN_STATUS_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
   }
@@ -379,8 +381,9 @@ export class LoanService {
 
       logger.info('CREATE_LOAN_SUCCESS', `Successfully created loan ${result.loanId}`, { tenantId: shopId, userId, correlationId })
       return result
-    } catch (error: any) {
-      logger.error('CREATE_LOAN_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('CREATE_LOAN_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
   }

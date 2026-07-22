@@ -16,8 +16,8 @@ export default function DeleteBranchButton({ branchId, branchName }: { branchId:
             alert(res.error)
             return
           }
-        } catch (err: any) {
-          alert(err.message || 'Failed to delete branch')
+        } catch (err: unknown) {
+          alert(err instanceof Error ? err.message : 'Failed to delete branch')
         }
       })
     }

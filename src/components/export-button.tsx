@@ -3,7 +3,7 @@
 import { Download } from 'lucide-react'
 
 interface ExportButtonProps {
-  data: any[]
+  data: Record<string, unknown>[]
   fileName: string
   sheetName?: string
   buttonText?: string

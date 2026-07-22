@@ -3,6 +3,7 @@ import CreateLoanDialog from "@/components/create-loan-dialog"
 import SearchInput from "@/components/search-input"
 import { getCachedUser } from "@/lib/user"
 import prisma from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { redirect } from "next/navigation"
 import { ArrowRight, Landmark, ChevronLeft, ChevronRight } from "lucide-react"
 import { calculateLoanBalances } from "@/lib/loan-utils"
@@ -28,7 +29,7 @@ export default async function LoansPage({
   const pageSize = 10
   const skip = (page - 1) * pageSize
 
-  const whereClause: any = {
+  const whereClause: Prisma.LoanWhereInput = {
     shopId: dbUser.shopId,
     isDeleted: false,
   }

@@ -16,8 +16,8 @@ export default function DeleteStaffButton({ staffId, staffName }: { staffId: str
             alert(res.error)
             return
           }
-        } catch (error: any) {
-          alert(error.message || 'Something went wrong')
+        } catch (error: unknown) {
+          alert(error instanceof Error ? error.message : 'Something went wrong')
         }
       })
     }

@@ -22,8 +22,8 @@ export default function AddBranchDialog() {
         return
       }
       setIsOpen(false)
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }

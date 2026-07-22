@@ -44,7 +44,7 @@ export default async function ReportsPage() {
   // Gold Weight by Purity map
   const goldInventoryByPurity: Record<string, number> = {}
 
-  const overdueLoans: any[] = []
+  const overdueLoans: Array<typeof loans[0] & { outstandingPrincipal: number; totalDue: number }> = []
 
   loans.forEach(loan => {
     totalDisbursed += Number(loan.principalAmount)

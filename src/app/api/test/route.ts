@@ -4,7 +4,7 @@ import { CustomerService } from '@/services/customer.service'
 import { LoanService } from '@/services/loan.service'
 
 export async function GET() {
-  const results: any[] = []
+  const results: string[] = []
   
   try {
     results.push('--- STARTING COMPREHENSIVE ENTITY TESTS ---')
@@ -70,8 +70,8 @@ export async function GET() {
         }
       )
       throw new Error('❌ Test Failed: Allowed an over-limit loan!')
-    } catch (error: any) {
-      if (error.message.includes('exceeds maximum LTV threshold')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('exceeds maximum LTV threshold')) {
         results.push('✅ Successfully caught LTV violation!')
       } else {
         throw error
@@ -126,8 +126,8 @@ export async function GET() {
         1 // Stale version!
       )
       throw new Error('❌ Test Failed: Allowed stale update (OCC bypassed)!')
-    } catch (error: any) {
-      if (error.message.includes('The loan has been updated by another process')) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('The loan has been updated by another process')) {
         results.push('✅ Successfully caught OCC concurrency violation!')
       } else {
         throw error
@@ -170,7 +170,7 @@ export async function GET() {
     results.push('✅ Tests Completed Successfully!')
 
     return NextResponse.json({ success: true, results })
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message, results }, { status: 500 })
+  } catch (error: unknown) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error', results }, { status: 500 })
   }
 }

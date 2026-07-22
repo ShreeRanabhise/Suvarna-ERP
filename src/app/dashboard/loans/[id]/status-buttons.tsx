@@ -21,8 +21,8 @@ export function StatusButtons({
       if (!res.success) {
         setError(res.error)
       }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Action failed')
     } finally {
       setLoadingAction(null)
     }

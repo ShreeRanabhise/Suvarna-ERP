@@ -9,9 +9,17 @@ interface LogPayload {
   tenantId?: string
   userId?: string
   correlationId: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   error?: Error | unknown
   timestamp: string
+}
+
+export interface LoggerContext {
+  tenantId?: string
+  userId?: string
+  correlationId?: string
+  metadata?: Record<string, unknown>
+  error?: unknown
 }
 
 class EnterpriseLogger {
@@ -42,7 +50,7 @@ class EnterpriseLogger {
     level: LogLevel,
     action: string,
     message: string,
-    context: { tenantId?: string; userId?: string; correlationId?: string; metadata?: Record<string, any>; error?: unknown }
+    context: LoggerContext
   ) {
     const payload: LogPayload = {
       level,
@@ -75,15 +83,15 @@ class EnterpriseLogger {
     }
   }
 
-  info(action: string, message: string, context: any = {}) {
+  info(action: string, message: string, context: LoggerContext = {}) {
     this.log('INFO', action, message, context)
   }
 
-  warn(action: string, message: string, context: any = {}) {
+  warn(action: string, message: string, context: LoggerContext = {}) {
     this.log('WARN', action, message, context)
   }
 
-  error(action: string, message: string, error: unknown, context: any = {}) {
+  error(action: string, message: string, error: unknown, context: LoggerContext = {}) {
     this.log('ERROR', action, message, { ...context, error })
   }
 }

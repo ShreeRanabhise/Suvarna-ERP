@@ -3,9 +3,9 @@ const Decimal = Prisma.Decimal
 export interface Payment {
   id: string
   loanId: string
-  amountPaid: any
-  principalPaid: any
-  interestPaid: any
+  amountPaid: Prisma.Decimal.Value
+  principalPaid: Prisma.Decimal.Value
+  interestPaid: Prisma.Decimal.Value
   paymentDate: Date | string
   paymentMode: 'CASH' | 'UPI' | 'BANK' | 'CHEQUE'
   referenceId: string | null
@@ -19,9 +19,9 @@ export interface Loan {
   shopId: string
   branchId: string | null
   customerId: string
-  principalAmount: any
-  interestRate: any
-  ltvPercentage: any
+  principalAmount: Prisma.Decimal.Value
+  interestRate: Prisma.Decimal.Value
+  ltvPercentage: Prisma.Decimal.Value
   status: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED'
   startDate: Date | string
   endDate: Date | string | null

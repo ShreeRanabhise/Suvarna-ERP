@@ -277,8 +277,9 @@ export class CustomerService {
 
       logger.info('ONBOARD_CUSTOMER_SUCCESS', `Successfully onboarded customer ${result.customerId}`, { tenantId: shopId, userId, correlationId })
       return result
-    } catch (error: any) {
-      logger.error('ONBOARD_CUSTOMER_FAILED', error.message, error, { tenantId: shopId, userId, correlationId })
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('ONBOARD_CUSTOMER_FAILED', message, error, { tenantId: shopId, userId, correlationId })
       throw error
     }
   }

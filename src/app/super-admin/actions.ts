@@ -49,8 +49,8 @@ export async function createShop(formData: FormData): Promise<ActionResult<{ sho
 
     revalidatePath('/super-admin')
     return { success: true, data: { shopId: shop.id } }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }
 
@@ -62,7 +62,7 @@ export async function toggleShopStatus(shopId: string, isSuspended: boolean): Pr
 
     revalidatePath('/super-admin')
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
   }
 }

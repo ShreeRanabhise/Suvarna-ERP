@@ -4,7 +4,16 @@ import { useState } from 'react'
 import { toggleShopStatus } from './actions'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
 
-export default function ShopRow({ shop }: { shop: any }) {
+type ShopWithDetails = {
+  id: string
+  name: string
+  subscriptionPlan: string
+  subscriptionEnd: Date | string
+  users: { name: string | null; email: string }[]
+  _count: { customers: number; loans: number }
+}
+
+export default function ShopRow({ shop }: { shop: ShopWithDetails }) {
   const isExpired = new Date(shop.subscriptionEnd) < new Date()
   const [suspended, setSuspended] = useState(isExpired)
   const [loading, setLoading] = useState(false)

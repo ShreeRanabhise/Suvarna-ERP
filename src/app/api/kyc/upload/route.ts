@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
     const { uploadUrl, filePath } = await KYCService.generateUploadUrl(shopId, customerId, extension)
 
     return NextResponse.json({ uploadUrl, filePath })
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || 'Failed to generate upload URL' },
+      { error: error instanceof Error ? error.message : 'Failed to generate upload URL' },
       { status: 400 }
     )
   }
