@@ -102,21 +102,30 @@ export default function PrintReceiptDialog({ loan, balances, shopName = 'Suvarna
               }
               #printable-receipt-sheet, #printable-receipt-sheet * {
                 visibility: visible !important;
-                color: #000000 !important;
-                background-color: transparent !important;
-                border-color: #000000 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
               #printable-receipt-sheet {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                max-width: 190mm !important; /* A4 width minus 20mm margins */
                 margin: 0 !important;
                 padding: 0 !important;
                 background-color: #ffffff !important;
-                color: #000000 !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+              /* Prevent splitting tables or cards across pages */
+              table, tr, td, th, .break-inside-avoid {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              h3, h4, h5 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
               }
               .print-hidden-control {
                 display: none !important;

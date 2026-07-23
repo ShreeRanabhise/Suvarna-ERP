@@ -136,7 +136,7 @@ export default function ShareCustomerPdfDialog({ customer, shopName = 'Gold ERP'
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 12mm;
+                margin: 10mm;
               }
               body * {
                 visibility: hidden !important;
@@ -152,9 +152,21 @@ export default function ShareCustomerPdfDialog({ customer, shopName = 'Gold ERP'
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                max-width: 190mm !important; /* A4 width minus 20mm margins */
                 margin: 0 !important;
                 padding: 0 !important;
                 background-color: #ffffff !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+              /* Prevent splitting tables or cards across pages */
+              table, tr, td, th, .break-inside-avoid {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              h3, h4, h5 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
               }
               .print-hidden-control {
                 display: none !important;

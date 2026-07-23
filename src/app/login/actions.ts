@@ -24,22 +24,6 @@ export async function login(formData: FormData) {
   redirect('/dashboard')
 }
 
-export async function resetPassword(formData: FormData) {
-  const email = formData.get('email') as string
-  const supabase = await createClient()
-
-  if (!email) {
-    redirect('/login?message=Email is required to reset password')
-  }
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email)
-
-  if (error) {
-    redirect('/login?message=Could not reset password')
-  }
-
-  redirect('/login?message=Check your email for the reset link')
-}
 
 export async function logout() {
   const supabase = await createClient()

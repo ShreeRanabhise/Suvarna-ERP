@@ -1,4 +1,5 @@
-import { login, resetPassword } from './actions'
+import { login } from './actions'
+import Link from 'next/link'
 import { AnimatedJewelryBackground } from '@/components/login/animated-jewelry-background'
 
 export default async function LoginPage(
@@ -46,13 +47,12 @@ export default async function LoginPage(
               <label className="text-sm font-medium text-foreground" htmlFor="password">
                 Password
               </label>
-              <button 
-                formAction={resetPassword}
-                formNoValidate
+              <Link 
+                href="/auth/forgot-password"
                 className="text-xs text-[#BA390C] hover:underline bg-transparent border-none p-0 cursor-pointer"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <input
               className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
