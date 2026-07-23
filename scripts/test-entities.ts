@@ -57,7 +57,8 @@ async function main() {
         phone: '9999999999',
         email: null,
         aadhaar: '111122223333',
-        address: 'Test Address'
+        address: 'Test Address',
+        branchId: shop.branches[0].id
       },
       {
         principalAmount: 80000, // 80k

@@ -20,6 +20,7 @@ export interface LoggerContext {
   correlationId?: string
   metadata?: Record<string, unknown>
   error?: unknown
+  [key: string]: any
 }
 
 class EnterpriseLogger {

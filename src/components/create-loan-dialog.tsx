@@ -195,11 +195,13 @@ export default function CreateLoanDialog({
 
     try {
       const res = await lookupCustomer(query)
-      if (!res.success || !res.data) {
-        setFetchError(res.error || 'No customer found')
-      } else {
+      if (res.success && res.data) {
         setFetchedCustomer(res.data)
         setInputCustomerId(res.data.numericId)
+      } else if (!res.success) {
+        setFetchError(res.error || 'No customer found')
+      } else {
+        setFetchError('No customer found')
       }
     } catch {
       setFetchError('Failed to lookup customer')

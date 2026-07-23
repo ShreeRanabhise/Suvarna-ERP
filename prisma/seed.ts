@@ -40,7 +40,16 @@ async function main() {
           name: 'Standard Owner',
           role: 'OWNER',
         }
+      },
+      branches: {
+        create: {
+          name: 'Shree Gold Loans (Standard)',
+          location: 'Main Branch'
+        }
       }
+    },
+    include: {
+      branches: true
     }
   })
 
@@ -83,9 +92,12 @@ async function main() {
   })
 
   // 5. Create Sample Customers for Standard Shop
+  const standardBranchId = standardShop.branches[0].id
+  
   const customer1 = await prisma.customer.create({
     data: {
       shopId: standardShop.id,
+      branchId: standardBranchId,
       firstName: 'Ramesh',
       lastName: 'Kumar',
       phone: '9876543210',
@@ -99,6 +111,7 @@ async function main() {
     data: {
       loanNumber: 'SGL-2024-001',
       shopId: standardShop.id,
+      branchId: standardBranchId,
       customerId: customer1.id,
       principalAmount: 50000,
       interestRate: 2.0, // 2% per month
@@ -109,7 +122,9 @@ async function main() {
           name: 'Gold Chain',
           weightGrams: 15.5,
           purity: '22K',
-          valuation: 66600
+          valuation: 65000,
+          shopId: standardShop.id,
+          branchId: standardBranchId,
         }
       }
     }

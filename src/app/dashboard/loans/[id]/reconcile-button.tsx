@@ -13,8 +13,10 @@ export function ReconcileButton({ loanId }: { loanId: string }) {
       const res = await verifyLoanLedger(loanId)
       if (res.success && res.data) {
         setResult(res.data)
-      } else {
+      } else if (!res.success) {
         alert(res.error || 'Failed to reconcile')
+      } else {
+        alert('Failed to reconcile')
       }
     })
   }

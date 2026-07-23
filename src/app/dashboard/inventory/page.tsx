@@ -50,8 +50,8 @@ export default async function InventoryPage({
 
   if (activeTab !== 'ALL') {
     whereClause.loan = {
-      ...whereClause.loan,
-      status: activeTab as Prisma.EnumLoanStatusFilter | "ACTIVE" | "CLOSED" | "OVERDUE" | "AUCTION" | "RENEWED"
+      ...(whereClause.loan as Prisma.LoanWhereInput),
+      status: activeTab as any
     }
   }
 
