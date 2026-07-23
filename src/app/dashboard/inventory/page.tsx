@@ -38,17 +38,14 @@ export default async function InventoryPage({
   const pageSize = 12
 
   const whereClause: Prisma.PledgedItemWhereInput = {
+    shopId: dbUser.shopId,
     loan: {
-      shopId: dbUser.shopId,
       isDeleted: false,
     }
   }
 
   if (dbUser.role === 'STAFF') {
-    whereClause.loan = {
-      ...whereClause.loan,
-      branchId: dbUser.branchId || 'UNASSIGNED'
-    }
+    whereClause.branchId = dbUser.branchId || 'UNASSIGNED'
   }
 
   if (activeTab !== 'ALL') {
@@ -108,12 +105,9 @@ export default async function InventoryPage({
       ...(cursor ? { cursor: { id: cursor } } : {})
     }),
     prisma.pledgedItem.aggregate({
-      where: {
-        loan: {
-          shopId: dbUser.shopId,
-          isDeleted: false,
-        }
-      },
+      where: dbUser.role === 'STAFF' 
+        ? { shopId: dbUser.shopId, branchId: dbUser.branchId || 'UNASSIGNED', loan: { isDeleted: false } }
+        : { shopId: dbUser.shopId, loan: { isDeleted: false } },
       _sum: {
         weightGrams: true,
         valuation: true,
@@ -123,25 +117,17 @@ export default async function InventoryPage({
       }
     }),
     prisma.pledgedItem.aggregate({
-      where: {
-        loan: {
-          shopId: dbUser.shopId,
-          status: 'ACTIVE',
-          isDeleted: false,
-        }
-      },
+      where: dbUser.role === 'STAFF'
+        ? { shopId: dbUser.shopId, branchId: dbUser.branchId || 'UNASSIGNED', loan: { status: 'ACTIVE', isDeleted: false } }
+        : { shopId: dbUser.shopId, loan: { status: 'ACTIVE', isDeleted: false } },
       _count: {
         id: true
       }
     }),
     prisma.pledgedItem.count({
-      where: {
-        loan: {
-          shopId: dbUser.shopId,
-          status: 'CLOSED',
-          isDeleted: false,
-        }
-      }
+      where: dbUser.role === 'STAFF'
+        ? { shopId: dbUser.shopId, branchId: dbUser.branchId || 'UNASSIGNED', loan: { status: 'CLOSED', isDeleted: false } }
+        : { shopId: dbUser.shopId, loan: { status: 'CLOSED', isDeleted: false } }
     })
   ])
 

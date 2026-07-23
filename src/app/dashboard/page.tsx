@@ -37,9 +37,13 @@ function ListSkeleton() {
   return <div className="rounded-lg border border-border bg-card shadow-subtle p-6 lg:col-span-4 h-96 animate-pulse"></div>
 }
 
-async function KpiMetrics({ shopId }: { shopId: string }) {
+async function KpiMetrics({ shopId, branchId }: { shopId: string, branchId?: string }) {
   const now = new Date()
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+
+  const whereCustomer = branchId ? { shopId, branchId, isDeleted: false } : { shopId, isDeleted: false }
+  const whereLoan = branchId ? { shopId, branchId, isDeleted: false } : { shopId, isDeleted: false }
+  const wherePledgedItem = branchId ? { shopId, branchId, loan: { status: 'ACTIVE', isDeleted: false } } : { shopId, loan: { status: 'ACTIVE', isDeleted: false } }
 
   const [
     totalCustomers,
@@ -49,12 +53,12 @@ async function KpiMetrics({ shopId }: { shopId: string }) {
     dueThisMonthCount,
     goldReservedAgg,
   ] = await Promise.all([
-    prisma.customer.count({ where: { shopId, isDeleted: false } }),
-    prisma.loan.count({ where: { shopId, status: 'ACTIVE', isDeleted: false } }),
-    prisma.loan.aggregate({ where: { shopId, status: 'ACTIVE', isDeleted: false }, _sum: { principalAmount: true } }),
-    prisma.payment.aggregate({ where: { loan: { shopId, status: 'ACTIVE', isDeleted: false } }, _sum: { principalPaid: true } }),
-    prisma.loan.count({ where: { shopId, status: 'ACTIVE', isDeleted: false, endDate: { lte: endOfMonth } } }),
-    prisma.pledgedItem.aggregate({ where: { loan: { shopId, status: 'ACTIVE', isDeleted: false } }, _sum: { weightGrams: true } }),
+    prisma.customer.count({ where: whereCustomer }),
+    prisma.loan.count({ where: { ...whereLoan, status: 'ACTIVE' } }),
+    prisma.loan.aggregate({ where: { ...whereLoan, status: 'ACTIVE' }, _sum: { principalAmount: true } }),
+    prisma.payment.aggregate({ where: { loan: { ...whereLoan, status: 'ACTIVE' } }, _sum: { principalPaid: true } }),
+    prisma.loan.count({ where: { ...whereLoan, status: 'ACTIVE', endDate: { lte: endOfMonth } } }),
+    prisma.pledgedItem.aggregate({ where: wherePledgedItem as any, _sum: { weightGrams: true } }),
   ])
 
   const totalPrincipal = Number(outstandingAgg._sum.principalAmount || 0)
@@ -132,12 +136,16 @@ async function KpiMetrics({ shopId }: { shopId: string }) {
   )
 }
 
-async function MonthlyDisbursements({ shopId }: { shopId: string }) {
+async function MonthlyDisbursements({ shopId, branchId }: { shopId: string, branchId?: string }) {
   const sixMonthsAgo = new Date()
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
+  const whereLoan = branchId 
+    ? { shopId, branchId, isDeleted: false, startDate: { gte: sixMonthsAgo } }
+    : { shopId, isDeleted: false, startDate: { gte: sixMonthsAgo } }
+
   const disbursements = await prisma.loan.findMany({
-    where: { shopId, isDeleted: false, startDate: { gte: sixMonthsAgo } },
+    where: whereLoan,
     select: { principalAmount: true, startDate: true }
   })
 
@@ -192,9 +200,11 @@ async function MonthlyDisbursements({ shopId }: { shopId: string }) {
   )
 }
 
-async function RecentCollections({ shopId }: { shopId: string }) {
+async function RecentCollections({ shopId, branchId }: { shopId: string, branchId?: string }) {
+  const whereLoan = branchId ? { shopId, branchId, isDeleted: false } : { shopId, isDeleted: false }
+
   const recentPayments = await prisma.payment.findMany({
-    where: { loan: { shopId, isDeleted: false } },
+    where: { loan: whereLoan },
     include: { loan: { include: { customer: true } } },
     orderBy: { paymentDate: 'desc' },
     take: 7
@@ -259,6 +269,7 @@ export default async function DashboardPage() {
   const dbUser = await getCachedUser()
   if (!dbUser || !dbUser.shopId) redirect('/login')
   const shopId = dbUser.shopId
+  const branchId = dbUser.role === 'STAFF' ? (dbUser.branchId || 'UNASSIGNED') : undefined
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
@@ -278,17 +289,17 @@ export default async function DashboardPage() {
           <MetricSkeleton /><MetricSkeleton /><MetricSkeleton /><MetricSkeleton /><MetricSkeleton />
         </div>
       }>
-        <KpiMetrics shopId={shopId} />
+        <KpiMetrics shopId={shopId} branchId={branchId} />
       </Suspense>
 
       {/* Main Charts & Activities Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-7">
         <Suspense fallback={<ChartSkeleton />}>
-          <MonthlyDisbursements shopId={shopId} />
+          <MonthlyDisbursements shopId={shopId} branchId={branchId} />
         </Suspense>
 
         <Suspense fallback={<ListSkeleton />}>
-          <RecentCollections shopId={shopId} />
+          <RecentCollections shopId={shopId} branchId={branchId} />
         </Suspense>
       </div>
     </div>

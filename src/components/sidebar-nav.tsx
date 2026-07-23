@@ -60,14 +60,15 @@ export default function SidebarNav({
     setPwSuccess(null)
     setPwLoading(true)
 
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
     try {
       const res = await changePassword(formData)
       if (!res.success) {
         setPwError(res.error || 'Failed to update password')
       } else {
         setPwSuccess('Password updated successfully!')
-        e.currentTarget.reset()
+        form.reset()
         setTimeout(() => {
           setShowChangePassword(false)
           setPwSuccess(null)
@@ -249,10 +250,6 @@ export default function SidebarNav({
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                <Shield className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>Shop profile parameters are managed directly by system administrators.</span>
-              </div>
 
               {/* Change Password Section */}
               <div className="pt-2 border-t border-border">

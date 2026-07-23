@@ -12,11 +12,14 @@ export default async function ReportsPage() {
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
   const shopId = dbUser.shopId
+  const branchId = dbUser.role === 'STAFF' ? (dbUser.branchId || 'UNASSIGNED') : undefined
+
+  const whereLoan = branchId ? { shopId, branchId, isDeleted: false } : { shopId, isDeleted: false }
 
   // Fetch all loans and payments in parallel
   const [loans, payments] = await Promise.all([
     prisma.loan.findMany({
-      where: { shopId, isDeleted: false },
+      where: whereLoan,
       include: {
         customer: true,
         pledgedItems: true,
@@ -25,7 +28,7 @@ export default async function ReportsPage() {
     }),
     prisma.payment.findMany({
       where: {
-        loan: { shopId, isDeleted: false }
+        loan: whereLoan
       },
       include: {
         loan: {

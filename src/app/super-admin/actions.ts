@@ -16,6 +16,7 @@ const shopSchema = z.object({
   ownerEmail: z.string().email('Invalid email address').max(100),
   ownerName: z.string().min(1, 'Owner name is required').max(100).trim(),
   ownerPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  branchLocation: z.string().optional(),
 })
 
 // Helper to verify Super Admin role
@@ -56,6 +57,7 @@ export async function createShop(formData: FormData): Promise<ActionResult<{ sho
       ownerEmail: formData.get('ownerEmail') as string,
       ownerName: formData.get('ownerName') as string,
       ownerPassword: formData.get('ownerPassword') as string,
+      branchLocation: formData.get('branchLocation') as string || undefined,
     }
 
     const parsed = shopSchema.parse(data)

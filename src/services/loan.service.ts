@@ -304,6 +304,27 @@ export class LoanService {
     try {
       logger.info('CREATE_LOAN_START', `Initiating loan creation for customer ${loanData.customerId}`, { tenantId: shopId, userId, correlationId })
 
+      let resolvedBranchId = branchId
+      if (!resolvedBranchId) {
+        const creator = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { branchId: true }
+        })
+        if (creator?.branchId) {
+          resolvedBranchId = creator.branchId
+        } else {
+          const defaultBranch = await prisma.branch.findFirst({
+            where: { shopId },
+            orderBy: { createdAt: 'asc' }
+          })
+          resolvedBranchId = defaultBranch?.id || null
+        }
+      }
+
+      if (!resolvedBranchId) {
+        throw new Error('A valid branch could not be determined. Please create a branch for this shop.')
+      }
+
       const result = await prisma.$transaction(async (tx) => {
         // Idempotency check
         const existingLog = await tx.idempotencyLog.findUnique({
@@ -316,20 +337,33 @@ export class LoanService {
         // Pessimistically lock the shop row to guarantee sequential loan numbers
         await tx.$queryRaw`SELECT id FROM "Shop" WHERE id = ${shopId} FOR UPDATE`
         
-        const count = await tx.loan.count({ where: { shopId } })
-        const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+        const currentYear = new Date().getFullYear()
+        const latestLoan = await tx.loan.findFirst({
+          where: { shopId, loanNumber: { startsWith: `SGL-${currentYear}-` } },
+          orderBy: { loanNumber: 'desc' },
+          select: { loanNumber: true }
+        })
+        let nextSeq = 1
+        if (latestLoan?.loanNumber) {
+          const parts = latestLoan.loanNumber.split('-')
+          const lastNum = parseInt(parts[2], 10)
+          if (!isNaN(lastNum)) nextSeq = lastNum + 1
+        }
+        const loanNumber = `SGL-${currentYear}-${String(nextSeq).padStart(4, '0')}`
 
         const newLoan = await tx.loan.create({
           data: {
             loanNumber,
             shopId,
-            branchId,
+            branchId: resolvedBranchId,
             customerId: loanData.customerId,
             principalAmount: loanData.principalAmount,
             interestRate: loanData.interestRate,
             ltvPercentage: loanData.ltvPercentage,
             pledgedItems: {
               create: {
+                shopId,
+                branchId: resolvedBranchId,
                 name: loanData.itemName,
                 weightGrams: loanData.weightGrams,
                 purity: loanData.purity,

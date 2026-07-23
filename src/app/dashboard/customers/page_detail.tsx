@@ -18,8 +18,13 @@ export default async function CustomerDetailPage(props: { params: Promise<{ id: 
   })
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
+  const whereClause: any = { id: customerId, shopId: dbUser.shopId }
+  if (dbUser.role === 'STAFF') {
+    whereClause.branchId = dbUser.branchId || 'UNASSIGNED'
+  }
+
   const customer = await prisma.customer.findFirst({
-    where: { id: customerId, shopId: dbUser.shopId },
+    where: whereClause,
     include: {
       loans: {
         where: { isDeleted: false },

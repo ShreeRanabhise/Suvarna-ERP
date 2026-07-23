@@ -190,7 +190,7 @@ function UploadCard({
             src={displayUrl} 
             alt={label} 
             onClick={() => setIsPreviewOpen(true)}
-            className={`${label.toLowerCase().includes('photo') ? 'h-16 w-12 aspect-[3/4]' : 'h-14 w-20'} object-cover rounded-md border border-border bg-background cursor-pointer hover:opacity-80 transition-opacity`}
+            className={`${label.toLowerCase().includes('customer photo') ? 'h-16 w-12 aspect-[3/4]' : 'h-14 w-20'} object-cover rounded-md border border-border bg-background cursor-pointer hover:opacity-80 transition-opacity`}
           />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground truncate">
@@ -585,14 +585,14 @@ export default function CreateCustomerDialog() {
 
       {isOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in p-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false) }}
         >
           <div 
             role="dialog"
             aria-labelledby="add-customer-modal-title"
             aria-modal="true"
-            className="bg-card p-6 md:p-8 rounded-modal border border-border shadow-modal max-w-3xl w-full max-h-[92vh] overflow-y-auto relative my-auto"
+            className="bg-card p-6 md:p-8 rounded-modal border border-border shadow-modal max-w-3xl w-full max-h-[92vh] overflow-y-auto relative my-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
@@ -959,7 +959,7 @@ export default function CreateCustomerDialog() {
                   />
                 </div>
 
-                {/* PAN Photo (Conditional Requirement) */}
+                {/* PAN Photo & Customer Profile */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <UploadCard
                     label={`PAN Photo ${pan ? '*' : '(Optional)'}`}
@@ -968,24 +968,14 @@ export default function CreateCustomerDialog() {
                     onChange={(file) => handleFileChange(file, setPanPhoto)}
                     onRemove={() => setPanPhoto({ file: null, previewUrl: null, filePath: null, uploading: false, error: null })}
                   />
-                </div>
-              </div>
 
-              {/* SECTION 3: CUSTOMER PROFILE */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-border pb-2">
-                  <Camera className="h-4 w-4 text-primary" />
-                  <h4 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">
-                    Customer Profile
-                  </h4>
+                  <UploadCard
+                    label="Customer Photo (Optional)"
+                    fileState={customerPhoto}
+                    onChange={(file) => handleFileChange(file, setCustomerPhoto)}
+                    onRemove={() => setCustomerPhoto({ file: null, previewUrl: null, filePath: null, uploading: false, error: null })}
+                  />
                 </div>
-
-                <UploadCard
-                  label="Customer Photo (Optional)"
-                  fileState={customerPhoto}
-                  onChange={(file) => handleFileChange(file, setCustomerPhoto)}
-                  onRemove={() => setCustomerPhoto({ file: null, previewUrl: null, filePath: null, uploading: false, error: null })}
-                />
               </div>
 
               {/* Error Alert */}

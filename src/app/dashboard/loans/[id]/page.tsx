@@ -23,8 +23,13 @@ export default async function LoanDetailPage(props: { params: Promise<{ id: stri
   })
   if (!dbUser || !dbUser.shopId) redirect('/login')
 
+  const whereClause: any = { id: loanId, shopId: dbUser.shopId }
+  if (dbUser.role === 'STAFF') {
+    whereClause.branchId = dbUser.branchId || 'UNASSIGNED'
+  }
+
   const loan = await prisma.loan.findFirst({
-    where: { id: loanId, shopId: dbUser.shopId },
+    where: whereClause,
     include: {
       customer: true,
       pledgedItems: true,

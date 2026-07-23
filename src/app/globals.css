@@ -125,4 +125,72 @@
     font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
+
+  /* Progress bar animation */
+  @keyframes progressBar {
+    0% { transform: scaleX(0); }
+    50% { transform: scaleX(0.7); transform-origin: left; }
+    51% { transform: scaleX(0.7); transform-origin: right; }
+    100% { transform: scaleX(0); transform-origin: right; }
+  }
+  .animate-progress-bar {
+    animation: progressBar 1.5s infinite ease-in-out;
+    width: 100%;
+  }
+
+  @keyframes wander1 {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    25% { transform: translate3d(10vw, 15vh, 0) rotate(45deg); }
+    50% { transform: translate3d(-5vw, 25vh, 0) rotate(90deg); }
+    75% { transform: translate3d(-15vw, -5vh, 0) rotate(45deg); }
+    100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  }
+  @keyframes wander2 {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    25% { transform: translate3d(-10vw, 15vh, 0) rotate(-45deg); }
+    50% { transform: translate3d(15vw, -10vh, 0) rotate(-90deg); }
+    75% { transform: translate3d(20vw, 15vh, 0) rotate(-45deg); }
+    100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  }
+  @keyframes wander3 {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    25% { transform: translate3d(15vw, -15vh, 0) rotate(60deg); }
+    50% { transform: translate3d(-15vw, -20vh, 0) rotate(-30deg); }
+    75% { transform: translate3d(10vw, 20vh, 0) rotate(30deg); }
+    100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  }
+  
+  .animate-wander-1 { animation: wander1 infinite ease-in-out alternate; will-change: transform; }
+  .animate-wander-2 { animation: wander2 infinite ease-in-out alternate; will-change: transform; }
+  .animate-wander-3 { animation: wander3 infinite ease-in-out alternate; will-change: transform; }
+
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow {
+    animation: spinSlow 60s linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes floatParticle {
+    0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translate3d(10px, -40px, 0) scale(0.5); opacity: 0; }
+  }
+  .animate-float-particle {
+    animation: floatParticle infinite linear;
+    will-change: transform, opacity;
+  }
+
+  @keyframes lightBeam {
+    0% { transform: translate3d(-100%, -100%, 0) rotate(-45deg); }
+    10% { transform: translate3d(100%, 100%, 0) rotate(-45deg); }
+    100% { transform: translate3d(100%, 100%, 0) rotate(-45deg); }
+  }
+  .animate-light-beam {
+    animation: lightBeam 15s infinite linear;
+    will-change: transform;
+  }
 }

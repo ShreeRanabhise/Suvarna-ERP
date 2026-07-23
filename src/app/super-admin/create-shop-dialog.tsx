@@ -82,6 +82,18 @@ export default function CreateShopDialog() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
+                    <label htmlFor="branchLocation" className="text-sm font-medium text-foreground">Location</label>
+                    <input
+                      id="branchLocation"
+                      name="branchLocation"
+                      placeholder="e.g. MG Road, Pune"
+                      className="rounded-md px-3 py-2 border border-border bg-background text-sm text-foreground placeholder:text-foreground-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="flex flex-col gap-1.5">
                     <label htmlFor="subscriptionPlan" className="text-sm font-medium text-foreground">Subscription Plan *</label>
                     <select
                       id="subscriptionPlan"

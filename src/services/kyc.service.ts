@@ -36,14 +36,14 @@ export class KYCService {
    * and syncs with Supabase Storage if configured.
    * Returns a clean, direct public web URL.
    */
-  static async uploadFileDirect(shopId: string, customerId: string, file: File) {
+  static async uploadFileDirect(shopId: string, branchId: string, customerId: string, file: File) {
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const fileName = `kyc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // 1. Save locally to public/uploads/kyc/{shopId}/
-    const relativeDirPath = `/uploads/kyc/${shopId}`
-    const absoluteDirPath = path.join(process.cwd(), 'public', 'uploads', 'kyc', shopId)
+    // 1. Save locally to public/uploads/kyc/{shopId}/{branchId}/
+    const relativeDirPath = `/uploads/kyc/${shopId}/${branchId}`
+    const absoluteDirPath = path.join(process.cwd(), 'public', 'uploads', 'kyc', shopId, branchId)
     await fs.mkdir(absoluteDirPath, { recursive: true })
 
     const absoluteFilePath = path.join(absoluteDirPath, fileName)
@@ -56,7 +56,7 @@ export class KYCService {
     if (supabase) {
       try {
         await this.ensureBucketExists(supabase)
-        const storagePath = `${shopId}/${fileName}`
+        const storagePath = `${shopId}/${branchId}/${fileName}`
         await supabase.storage
           .from(BUCKET_NAME)
           .upload(storagePath, buffer, {

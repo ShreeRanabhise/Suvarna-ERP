@@ -14,6 +14,7 @@ export class ShopService {
     ownerEmail: string
     ownerName: string
     ownerPassword: string
+    branchLocation?: string
   }) {
     let authId: string | null = null
 
@@ -55,6 +56,14 @@ export class ShopService {
           subscriptionPlan: data.subscriptionPlan,
           subscriptionEnd: new Date(data.subscriptionEnd),
           whatsappAddon: data.whatsappAddon,
+        }
+      })
+
+      await tx.branch.create({
+        data: {
+          shopId: newShop.id,
+          name: newShop.name,
+          location: data.branchLocation,
         }
       })
 

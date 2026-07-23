@@ -1,5 +1,5 @@
-import { login } from './actions'
-import { Sparkles } from 'lucide-react'
+import { login, resetPassword } from './actions'
+import { AnimatedJewelryBackground } from '@/components/login/animated-jewelry-background'
 
 export default async function LoginPage(
   props: {
@@ -9,13 +9,19 @@ export default async function LoginPage(
   const searchParams = await props.searchParams
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background-secondary px-6 py-12">
-      <div className="w-full max-w-sm rounded-lg bg-card p-8 shadow-dropdown border border-border">
+    <div className="relative flex flex-col items-center justify-center min-h-screen px-6 py-12 overflow-hidden">
+      <AnimatedJewelryBackground />
+      
+      <div 
+        className="w-full max-w-sm p-8 relative z-10 rounded-[24px] backdrop-blur-[18px]"
+        style={{
+          background: "rgba(255, 255, 255, 0.82)",
+          border: "1px solid rgba(255, 215, 120, 0.25)",
+          boxShadow: "0 25px 80px rgba(0, 0, 0, 0.08)"
+        }}
+      >
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="h-10 w-10 rounded-md bg-primary text-primary-foreground flex items-center justify-center shadow-subtle mx-auto mb-4">
-            <Sparkles className="h-5 w-5" />
-          </div>
           <h1 className="text-xl font-bold font-sans text-foreground leading-none">Suvarna ERP</h1>
           <p className="text-sm text-foreground-secondary mt-2">Sign in to your workspace</p>
         </div>
@@ -36,9 +42,18 @@ export default async function LoginPage(
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground" htmlFor="password">
-              Password
-            </label>
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-foreground" htmlFor="password">
+                Password
+              </label>
+              <button 
+                formAction={resetPassword}
+                formNoValidate
+                className="text-xs text-[#BA390C] hover:underline bg-transparent border-none p-0 cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            </div>
             <input
               className="rounded-md px-3 py-2 border border-border bg-background focus-ring text-sm text-foreground placeholder:text-foreground-disabled"
               type="password"

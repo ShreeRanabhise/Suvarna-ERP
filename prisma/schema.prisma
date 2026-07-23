@@ -73,12 +73,14 @@ model Shop {
   loans            Loan[]
   auditLogs        AuditLog[]
   notificationLogs NotificationLog[]
+  pledgedItems     PledgedItem[]
 }
 
 model Branch {
   id        String   @id @default(uuid())
   name      String
   shopId    String
+  location  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -86,6 +88,7 @@ model Branch {
   users     User[]
   customers Customer[]
   loans     Loan[]
+  pledgedItems PledgedItem[]
 
   @@index([shopId])
 }
@@ -93,7 +96,7 @@ model Branch {
 model Customer {
   id          String   @id @default(uuid())
   shopId      String
-  branchId    String?
+  branchId    String
   firstName   String   // Will store full Name
   lastName    String   @default("")
   phone       String   // Mobile
@@ -113,7 +116,7 @@ model Customer {
   updatedAt   DateTime @updatedAt
 
   shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  branch      Branch?  @relation(fields: [branchId], references: [id])
+  branch      Branch   @relation(fields: [branchId], references: [id])
   loans       Loan[]
   kycVersions CustomerKYCVersion[]
 
@@ -126,9 +129,9 @@ model Customer {
 
 model Loan {
   id             String     @id @default(uuid())
-  loanNumber     String     @unique // e.g. SGL-2024-0001
+  loanNumber     String     // e.g. SGL-2024-0001
   shopId         String
-  branchId       String?
+  branchId       String
   customerId     String
   principalAmount Decimal    @db.Decimal(12, 2)
   interestRate   Decimal    @db.Decimal(5, 2)      // Monthly interest rate percentage
@@ -142,7 +145,7 @@ model Loan {
   version        Int        @default(0) // Optimistic locking version tag
 
   shop           Shop          @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  branch         Branch?       @relation(fields: [branchId], references: [id])
+  branch         Branch        @relation(fields: [branchId], references: [id])
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   pledgedItems   PledgedItem[]
   payments       Payment[]
@@ -152,10 +155,13 @@ model Loan {
   @@index([shopId])
   @@index([branchId])
   @@index([customerId])
+  @@unique([shopId, loanNumber])
 }
 
 model PledgedItem {
   id          String   @id @default(uuid())
+  shopId      String
+  branchId    String
   loanId      String
   name        String   // e.g. Gold Chain
   weightGrams Decimal  @db.Decimal(10, 3)
@@ -165,8 +171,12 @@ model PledgedItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   loan        Loan     @relation(fields: [loanId], references: [id], onDelete: Restrict)
 
+  @@index([shopId])
+  @@index([branchId])
   @@index([loanId])
 }
 

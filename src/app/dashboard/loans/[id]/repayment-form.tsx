@@ -27,7 +27,8 @@ export function RepaymentForm({
     setError(null)
     setLoading(true)
 
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     // Only append if it exists (might be empty initially)
     if (idempotencyKey) {
       formData.append('idempotencyKey', idempotencyKey)
@@ -39,9 +40,7 @@ export function RepaymentForm({
         setError(res.error)
         return
       }
-      if (event.currentTarget) {
-        event.currentTarget.reset()
-      }
+      form.reset()
       // Generate a new key for the NEXT payment intent only after success
       setIdempotencyKey(crypto.randomUUID())
     } catch (err: unknown) {

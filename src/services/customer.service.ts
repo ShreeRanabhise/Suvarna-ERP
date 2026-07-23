@@ -48,10 +48,32 @@ export class CustomerService {
         throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
       }
 
+      let resolvedBranchId = customerData.branchId
+      if (!resolvedBranchId) {
+        const creator = await tx.user.findUnique({
+          where: { id: userId },
+          select: { branchId: true }
+        })
+        if (creator?.branchId) {
+          resolvedBranchId = creator.branchId
+        } else {
+          const defaultBranch = await tx.branch.findFirst({
+            where: { shopId },
+            orderBy: { createdAt: 'asc' }
+          })
+          resolvedBranchId = defaultBranch?.id || null
+        }
+      }
+
+      if (!resolvedBranchId) {
+        throw new Error('A valid branch could not be determined. Please create a branch for this shop.')
+      }
+
       const newCustomer = await tx.customer.create({
         data: {
           ...customerData,
           shopId,
+          branchId: resolvedBranchId,
           panVerificationStatus: 'VERIFIED',
           panUploadedAt: new Date(),
           panVerifiedAt: new Date(),
@@ -220,11 +242,32 @@ export class CustomerService {
           throw new Error('Standard plan limit reached (100 customers max). Please upgrade to Enterprise.')
         }
         
+        let resolvedBranchId = customerData.branchId
+        if (!resolvedBranchId) {
+          const creator = await tx.user.findUnique({
+            where: { id: userId },
+            select: { branchId: true }
+          })
+          if (creator?.branchId) {
+            resolvedBranchId = creator.branchId
+          } else {
+            const defaultBranch = await tx.branch.findFirst({
+              where: { shopId },
+              orderBy: { createdAt: 'asc' }
+            })
+            resolvedBranchId = defaultBranch?.id || null
+          }
+        }
+
+        if (!resolvedBranchId) {
+          throw new Error('A valid branch could not be determined. Please create a branch for this shop.')
+        }
+
         // A. Create Customer
         const newCustomer = await tx.customer.create({
           data: {
             shopId,
-            branchId: customerData.branchId || null,
+            branchId: resolvedBranchId,
             firstName: customerData.firstName,
             lastName: '',
             phone: customerData.phone,
@@ -252,14 +295,26 @@ export class CustomerService {
         })
 
         // Generate Loan Number SGL-{YEAR}-{COUNT} inside the lock
-        const count = await tx.loan.count({ where: { shopId } })
-        const loanNumber = `SGL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+        const currentYear = new Date().getFullYear()
+        const latestLoan = await tx.loan.findFirst({
+          where: { shopId, loanNumber: { startsWith: `SGL-${currentYear}-` } },
+          orderBy: { loanNumber: 'desc' },
+          select: { loanNumber: true }
+        })
+        let nextSeq = 1
+        if (latestLoan?.loanNumber) {
+          const parts = latestLoan.loanNumber.split('-')
+          const lastNum = parseInt(parts[2], 10)
+          if (!isNaN(lastNum)) nextSeq = lastNum + 1
+        }
+        const loanNumber = `SGL-${currentYear}-${String(nextSeq).padStart(4, '0')}`
 
         // C. Create Loan
         const newLoan = await tx.loan.create({
           data: {
             loanNumber,
             shopId,
+            branchId: resolvedBranchId,
             customerId: newCustomer.id,
             principalAmount: loanData.principalAmount,
             interestRate: 2.0, // default interest rate: 2% monthly
@@ -267,6 +322,8 @@ export class CustomerService {
             version: 1, // initialize version to 1
             pledgedItems: {
               create: {
+                shopId,
+                branchId: resolvedBranchId,
                 name: loanData.goldItemName,
                 weightGrams: loanData.goldWeight,
                 purity: loanData.goldPurity,
