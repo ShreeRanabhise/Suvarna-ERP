@@ -1,6 +1,7 @@
 import { login } from './actions'
 import Link from 'next/link'
 import { AnimatedJewelryBackground } from '@/components/login/animated-jewelry-background'
+import { SubmitButton } from '@/components/login/submit-button'
 
 export default async function LoginPage(
   props: {
@@ -63,9 +64,9 @@ export default async function LoginPage(
             />
           </div>
 
-          <button className="bg-primary text-primary-foreground hover:bg-primary-hover py-2 rounded-md font-medium text-sm transition-colors shadow-subtle mt-2">
+          <SubmitButton>
             Sign In
-          </button>
+          </SubmitButton>
 
           {searchParams?.message && (
             <div className="mt-2 p-3 bg-destructive/10 text-destructive text-sm font-medium text-center rounded-md border border-destructive/20">
