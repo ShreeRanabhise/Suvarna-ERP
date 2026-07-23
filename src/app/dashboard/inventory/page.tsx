@@ -133,7 +133,7 @@ export default async function InventoryPage({
 
   let hasNextPage = false
   let hasPrevPage = false
-  let items = [...rawItems]
+  const items = [...rawItems]
 
   if (direction === 'next' || !cursor) {
     if (items.length > pageSize) {

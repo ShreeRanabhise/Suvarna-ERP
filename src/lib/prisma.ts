@@ -69,14 +69,14 @@ export function getTenantPrisma(shopId: string) {
           
           if (modelsWithShopId.includes(model)) {
             if (operation === 'findUnique' || operation === 'findFirst' || operation === 'findMany' || operation === 'count' || operation === 'update' || operation === 'updateMany' || operation === 'delete' || operation === 'deleteMany' || operation === 'aggregate' || operation === 'groupBy') {
-               // @ts-ignore
+               // @ts-expect-error
                args.where = { ...args.where, shopId }
             }
           }
 
           // Special case for Shop model itself - tenant can only query their own shop
           if (model === 'Shop' && (operation === 'findUnique' || operation === 'findFirst' || operation === 'update')) {
-              // @ts-ignore
+              // @ts-expect-error
              args.where = { ...args.where, id: shopId }
           }
           

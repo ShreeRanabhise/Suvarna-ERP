@@ -274,7 +274,6 @@ export class CustomerService {
             email: customerData.email,
             aadhaar: customerData.aadhaar,
             address: customerData.address,
-            documentUrl: customerData.documentUrl,
           }
         })
 

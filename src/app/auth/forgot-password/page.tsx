@@ -53,7 +53,7 @@ export default async function ForgotPasswordPage({
           </div>
           <h1 className="text-xl font-bold font-sans text-foreground leading-none">Reset Password</h1>
           <p className="text-sm text-foreground-secondary mt-2">
-            Enter your email and we'll send you a secure link.
+            Enter your email and we&apos;ll send you a secure link.
           </p>
         </div>
 

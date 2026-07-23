@@ -2,6 +2,7 @@ import { getTenantPrisma } from '@/lib/prisma'
 import { calculateLoanBalances } from '@/lib/loan-utils'
 import { logger } from '@/lib/logger'
 import { randomUUID } from 'crypto'
+import { Prisma } from '@prisma/client'
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   ACTIVE: ['OVERDUE', 'CLOSED', 'RENEWED'],
@@ -586,7 +587,7 @@ export class LoanService {
     })
 
     // Compute expected balances purely from ledger entries (sum of DEBITs - sum of CREDITs for PRINCIPAL)
-    let ledgerPrincipal = new Decimal(0)
+    let ledgerPrincipal = new Prisma.Decimal(0)
     for (const entry of ledgerEntries) {
       if (entry.category === 'PRINCIPAL') {
         if (entry.type === 'DEBIT') {

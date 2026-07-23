@@ -3,7 +3,6 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
 import { CustomerService } from '@/services/customer.service'
 import { LoanService } from '@/services/loan.service'
@@ -188,7 +187,7 @@ export async function createLoan(formData: FormData): Promise<ActionResult<{ loa
     requirePermission(role, 'loan.create')
     await enforceRateLimit('createLoan', userId)
     
-    let rawCustomerId = (formData.get('customerId') as string)?.trim()
+    const rawCustomerId = (formData.get('customerId') as string)?.trim()
     if (!rawCustomerId) {
       throw new Error('Customer ID is required for loan assignment.')
     }
@@ -329,20 +328,6 @@ export async function lookupCustomer(query: string): Promise<ActionResult<{
   }
 }
 
-
-const onboardingSchema = z.object({
-  name: nameSchema,
-  phone: phoneSchema,
-  email: z.string().trim().toLowerCase().optional().or(z.literal('')),
-  aadhaar: aadhaarSchema,
-  address: addressSchema,
-  documentUrl: z.string().max(500).optional().nullable().or(z.literal('')),
-  goldItemName: z.string().min(1, 'Gold item name is required').max(100).trim(),
-  goldWeight: z.number().min(0.01, 'Weight must be greater than 0').max(10000),
-  goldPurity: z.string().min(1, 'Purity is required').max(20).trim(),
-  valuation: z.number().min(0.01, 'Valuation must be greater than 0').max(20000000),
-  principalAmount: z.number().min(0.01, 'Principal amount must be greater than 0').max(10000000),
-})
 
 export async function onboardCustomerWithLoan(formData: FormData): Promise<ActionResult<{ customerId: string, loanId: string }>> {
   try {
@@ -486,21 +471,6 @@ export async function deleteBranch(branchId: string): Promise<ActionResult> {
     return { success: true }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' }
-  }
-}
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  ACTIVE: ['OVERDUE', 'CLOSED', 'RENEWED'],
-  OVERDUE: ['AUCTION', 'ACTIVE', 'CLOSED'],
-  AUCTION: ['ACTIVE', 'CLOSED'],
-  CLOSED: [],
-  RENEWED: []
-}
-
-function validateStateTransition(from: string, to: string) {
-  const allowed = VALID_TRANSITIONS[from] || []
-  if (from !== to && !allowed.includes(to)) {
-    throw new Error(`Invalid status transition from ${from} to ${to}`)
   }
 }
 

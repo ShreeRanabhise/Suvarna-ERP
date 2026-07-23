@@ -8,9 +8,9 @@ async function main() {
   console.log('--- STARTING COMPREHENSIVE ENTITY TESTS ---')
 
   // Cleanup testing artifacts if they exist
-  await prisma.payment.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
+  await prisma.payment.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.pledgedItem.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
-  await prisma.ledgerEntry.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
+  await prisma.ledgerEntry.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.loanStateHistory.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.loan.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
   await prisma.customerKYCVersion.deleteMany({ where: { customer: { shop: { name: 'Test Entity Shop' } } } })
@@ -156,9 +156,9 @@ async function main() {
 
   // Cleanup
   console.log('\nCleaning up tests...')
-  await prisma.payment.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
+  await prisma.payment.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.pledgedItem.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
-  await prisma.ledgerEntry.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
+  await prisma.ledgerEntry.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.loanStateHistory.deleteMany({ where: { loan: { shop: { name: 'Test Entity Shop' } } } })
   await prisma.loan.deleteMany({ where: { shop: { name: 'Test Entity Shop' } } })
   await prisma.customerKYCVersion.deleteMany({ where: { customer: { shop: { name: 'Test Entity Shop' } } } })

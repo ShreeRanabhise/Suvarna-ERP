@@ -102,7 +102,7 @@ export default async function LoansPage({
   
   let hasNextPage = false
   let hasPrevPage = false
-  let loans = [...rawLoans]
+  const loans = [...rawLoans]
 
   if (direction === 'next' || !cursor) {
     if (loans.length > pageSize) {

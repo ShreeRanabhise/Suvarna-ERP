@@ -86,7 +86,7 @@ export default async function CustomersPage({
   
   let hasNextPage = false
   let hasPrevPage = false
-  let customers = [...rawCustomers]
+  const customers = [...rawCustomers]
 
   if (direction === 'next' || !cursor) {
     if (customers.length > pageSize) {

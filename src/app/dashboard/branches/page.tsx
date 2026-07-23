@@ -185,7 +185,7 @@ export default async function BranchesPage() {
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Building className="h-10 w-10 text-foreground-muted/40" />
                       <p className="text-sm font-medium">No store branches configured yet.</p>
-                      <p className="text-xs text-foreground-muted">Click "Add Branch" above to setup your first location.</p>
+                      <p className="text-xs text-foreground-muted">Click &quot;Add Branch&quot; above to setup your first location.</p>
                     </div>
                   </td>
                 </tr>

@@ -50,9 +50,7 @@ export async function GET() {
     // 1b. Test Aadhaar Verhoeff & PAN Validation Primitives
     results.push('1b. Testing Verhoeff Aadhaar & PAN Validation Primitives...')
     const isValidVerhoeff = validateVerhoeff('299433989146') // Known valid Verhoeff number
-    const isInvalidVerhoeff = validateVerhoeff('111122223333')
     const isValidPAN = validatePAN('ABCDE1234F')
-    const isInvalidPAN = validatePAN('12345ABCDE')
     
     results.push(`   -> Valid Verhoeff check: ${isValidVerhoeff ? 'PASSED ✅' : 'FAILED ❌'}`)
     results.push(`   -> Valid PAN check: ${isValidPAN ? 'PASSED ✅' : 'FAILED ❌'}`)
