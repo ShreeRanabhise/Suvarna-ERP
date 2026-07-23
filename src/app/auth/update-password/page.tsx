@@ -1,5 +1,4 @@
 import { updatePassword } from '../actions'
-import { KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AnimatedJewelryBackground } from '@/components/login/animated-jewelry-background'
@@ -35,16 +34,10 @@ export default async function UpdatePasswordPage({
         }}
       >
         {/* Brand Header */}
-        <div className="text-center mb-8 mt-2">
-          <div className="mx-auto h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <KeyRound className="h-6 w-6 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold font-sans text-foreground leading-none">Set New Password</h1>
-          <p className="text-sm text-foreground-secondary mt-2">
-            Must be at least 8 characters long.
-          </p>
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-bold font-sans text-foreground leading-none">Suvarna ERP</h1>
+          <p className="text-sm text-foreground-secondary mt-2">Set new password for your workspace</p>
         </div>
-
         {/* Action Form */}
         <form className="flex flex-col gap-5" action={updatePassword}>
           <div className="flex flex-col gap-1.5">
