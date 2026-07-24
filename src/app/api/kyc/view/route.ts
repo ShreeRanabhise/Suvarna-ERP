@@ -23,11 +23,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(filePath)
     }
 
-    // If it's a local relative path starting with /
-    if (filePath.startsWith('/')) {
-      return NextResponse.redirect(new URL(filePath, req.url))
-    }
-
     // Generate signed URL or local path from Supabase / filesystem
     const resolvedUrl = await KYCService.getSignedReadUrl(filePath, 3600)
     

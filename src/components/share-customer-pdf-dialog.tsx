@@ -43,9 +43,20 @@ interface ShareCustomerPdfDialogProps {
 
 function resolveDocumentUrl(rawUrl: string | null | undefined): string | null {
   if (!rawUrl) return null
-  if (rawUrl.startsWith('/') || rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
+
+  // Intercept accidentally saved Supabase public URLs (which fail if the bucket is private)
+  // and convert them back to relative paths for the view API to sign properly.
+  if (rawUrl.includes('/object/public/kyc-documents/')) {
+    const extractedPath = rawUrl.split('/object/public/kyc-documents/')[1]
+    if (extractedPath) {
+      return `/api/kyc/view?path=${encodeURIComponent('/uploads/kyc/' + extractedPath)}`
+    }
+  }
+
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
     return rawUrl
   }
+  // Route ALL relative paths through the view API so it can check Supabase vs Local
   return `/api/kyc/view?path=${encodeURIComponent(rawUrl)}`
 }
 

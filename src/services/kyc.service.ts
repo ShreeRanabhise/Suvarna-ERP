@@ -76,11 +76,11 @@ export class KYCService {
         }
         
         if (!error) {
-          const { data: publicUrlData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(storagePath)
-            
-          publicUrl = publicUrlData.publicUrl
+          // Do not use getPublicUrl because the bucket might be private.
+          // Instead, return the legacy local path style.
+          // The /api/kyc/view endpoint will automatically intercept this,
+          // strip the prefix, and generate a secure signed URL.
+          publicUrl = `${relativeDirPath}/${fileName}`
         }
       } catch (err) {
         if (!localSaveSuccess) {
@@ -100,9 +100,12 @@ export class KYCService {
   static async getSignedReadUrl(filePath: string, expiresIn: number = 3600) {
     if (!filePath) return ''
 
-    // If it's already a public web path or full HTTP URL, return as-is
-    if (filePath.startsWith('/') || filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:')) {
-      return filePath
+    // If it's a legacy local path, try to use it as a Supabase path by stripping the prefix
+    let storagePath = filePath
+    if (storagePath.startsWith('/uploads/kyc/')) {
+      storagePath = storagePath.replace('/uploads/kyc/', '')
+    } else if (storagePath.startsWith('/') || storagePath.startsWith('http://') || storagePath.startsWith('https://') || storagePath.startsWith('data:')) {
+      return storagePath
     }
 
     const supabase = getAdminClient()
@@ -110,7 +113,7 @@ export class KYCService {
       try {
         const { data, error } = await supabase.storage
           .from(BUCKET_NAME)
-          .createSignedUrl(filePath, expiresIn)
+          .createSignedUrl(storagePath, expiresIn)
 
         if (!error && data?.signedUrl) {
           return data.signedUrl
@@ -120,7 +123,7 @@ export class KYCService {
       }
     }
 
-    return `/uploads/kyc/${filePath}`
+    return filePath.startsWith('/uploads/kyc/') ? filePath : `/uploads/kyc/${filePath}`
   }
 
   /**
