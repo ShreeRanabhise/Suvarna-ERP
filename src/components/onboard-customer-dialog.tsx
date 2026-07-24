@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { onboardCustomerWithLoan } from '@/app/actions'
 import { UserCheck, X } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 export default function OnboardCustomerDialog() {
   const [isOpen, setIsOpen] = useState(false)
@@ -37,13 +38,13 @@ export default function OnboardCustomerDialog() {
 
   return (
     <>
-      <button
-        onClick={openDialog}
+      <LoadingButton
+        onClick={async () => openDialog()}
         className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover h-10 px-4 rounded-md font-medium text-sm transition-colors"
       >
         <UserCheck className="h-4.5 w-4.5" />
         <span>Onboard Customer & Loan</span>
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in overflow-y-auto">
@@ -211,20 +212,20 @@ export default function OnboardCustomerDialog() {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-border mt-8">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="px-4 h-10 border border-border hover:bg-background-secondary rounded-md text-sm font-medium text-foreground-secondary transition-colors"
                 >
                   Cancel
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="submit"
-                  disabled={loading}
-                  className="px-4 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                  loading={loading}
+                  className="px-4 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors"
                 >
-                  {loading ? 'Onboarding...' : 'Onboard & Disburse'}
-                </button>
+                  <span>Onboard & Disburse</span>
+                </LoadingButton>
               </div>
             </form>
           </div>

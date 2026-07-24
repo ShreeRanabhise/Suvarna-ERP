@@ -28,6 +28,7 @@ import {
   EyeOff,
   RefreshCw
 } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 interface SidebarNavProps {
   userEmail: string
@@ -173,23 +174,23 @@ export default function SidebarNav({
 
         {/* Footer / Profile Button & Logout */}
         <div className="mt-auto border-t border-border bg-background p-4 flex flex-col gap-2">
-          <button
+          <LoadingButton
             type="button"
             onClick={() => setIsProfileModalOpen(true)}
             className="flex w-full items-center justify-center gap-2.5 rounded-md border border-border bg-card hover:bg-background-secondary px-4 py-2 text-xs font-semibold text-foreground transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-subtle"
           >
             <User className="h-4 w-4 text-primary" />
             <span>Profile Info</span>
-          </button>
+          </LoadingButton>
 
           <form action={logout} className="w-full">
-            <button 
+            <LoadingButton 
               type="submit"
               className="flex w-full items-center justify-center gap-2.5 rounded-md border border-border bg-card hover:bg-background-secondary hover:text-destructive px-4 py-2 text-xs font-semibold text-foreground-secondary transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <LogOut className="h-4 w-4" />
               <span>Log Out</span>
-            </button>
+            </LoadingButton>
           </form>
         </div>
       </aside>
@@ -254,7 +255,7 @@ export default function SidebarNav({
               {/* Change Password Section */}
               <div className="pt-2 border-t border-border">
                 {!showChangePassword ? (
-                  <button
+                  <LoadingButton
                     type="button"
                     onClick={() => {
                       setShowChangePassword(true)
@@ -265,7 +266,7 @@ export default function SidebarNav({
                   >
                     <KeyRound className="h-3.5 w-3.5" />
                     <span>Change Password</span>
-                  </button>
+                  </LoadingButton>
                 ) : (
                   <form onSubmit={handleChangePassword} className="bg-background p-4 border border-border rounded-lg space-y-3 animate-fade-in">
                     <div className="flex items-center justify-between border-b border-border pb-2">
@@ -345,27 +346,26 @@ export default function SidebarNav({
                       </p>
                     )}
 
-                    <button
+                    <LoadingButton
                       type="submit"
-                      disabled={pwLoading}
-                      className="w-full py-2 rounded-md bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-subtle mt-1"
+                      loading={pwLoading}
+                      className="w-full py-2 rounded-md bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-subtle mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      {pwLoading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                      <span>{pwLoading ? 'Verifying & Updating...' : 'Update Password'}</span>
-                    </button>
+                      <span>Update Password</span>
+                    </LoadingButton>
                   </form>
                 )}
               </div>
             </div>
 
             <div className="mt-5 pt-3 border-t border-border flex justify-end">
-              <button
+              <LoadingButton
                 type="button"
-                onClick={() => setIsProfileModalOpen(false)}
-                className="px-4 py-2 rounded-md bg-background hover:bg-background-secondary border border-border text-xs font-semibold text-foreground transition-colors"
+                onClick={async () => setIsProfileModalOpen(false)}
+                className="px-4 py-2 rounded-md bg-background hover:bg-background-secondary border border-border text-xs font-semibold text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                Close
-              </button>
+                <span>Close</span>
+              </LoadingButton>
             </div>
           </div>
         </div>

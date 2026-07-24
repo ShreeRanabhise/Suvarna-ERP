@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { updateLoanStatus } from '@/app/actions'
+import { LoadingButton } from '@/components/loading-button'
 
 export function StatusButtons({ 
   loanId, 
@@ -11,20 +12,12 @@ export function StatusButtons({
   status: string 
 }) {
   const [error, setError] = useState<string | null>(null)
-  const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
   async function handleStatusChange(newStatus: 'ACTIVE' | 'CLOSED' | 'OVERDUE' | 'AUCTION' | 'RENEWED') {
     setError(null)
-    setLoadingAction(newStatus)
-    try {
-      const res = await updateLoanStatus(loanId, newStatus)
-      if (!res.success) {
-        setError(res.error)
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Action failed')
-    } finally {
-      setLoadingAction(null)
+    const res = await updateLoanStatus(loanId, newStatus)
+    if (!res.success) {
+      setError(res.error)
     }
   }
 
@@ -33,31 +26,28 @@ export function StatusButtons({
       <div className="flex gap-1.5">
         {status === 'ACTIVE' && (
           <>
-            <button 
-              onClick={() => handleStatusChange('OVERDUE')}
-              disabled={!!loadingAction}
-              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-destructive hover:bg-destructive/10 font-semibold transition-colors disabled:opacity-50"
+            <LoadingButton 
+              onClick={async () => await handleStatusChange('OVERDUE')}
+              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-destructive hover:bg-destructive/10 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
             >
-              {loadingAction === 'OVERDUE' ? '...' : 'Mark Overdue'}
-            </button>
-            <button 
-              onClick={() => handleStatusChange('AUCTION')}
-              disabled={!!loadingAction}
-              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-orange-600 hover:bg-orange-600/10 font-semibold transition-colors disabled:opacity-50"
+              <span>Mark Overdue</span>
+            </LoadingButton>
+            <LoadingButton 
+              onClick={async () => await handleStatusChange('AUCTION')}
+              className="text-[10px] border border-border bg-background px-2.5 py-1.5 rounded-md text-orange-600 hover:bg-orange-600/10 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600"
             >
-              {loadingAction === 'AUCTION' ? '...' : 'Send to Auction'}
-            </button>
+              <span>Send to Auction</span>
+            </LoadingButton>
           </>
         )}
 
         {status !== 'ACTIVE' && status !== 'CLOSED' && (
-          <button 
-            onClick={() => handleStatusChange('ACTIVE')}
-            disabled={!!loadingAction}
-            className="text-[10px] border border-border bg-background px-3 py-1.5 rounded-md text-primary hover:bg-primary-light font-semibold transition-colors disabled:opacity-50"
+          <LoadingButton 
+            onClick={async () => await handleStatusChange('ACTIVE')}
+            className="text-[10px] border border-border bg-background px-3 py-1.5 rounded-md text-primary hover:bg-primary-light font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            {loadingAction === 'ACTIVE' ? '...' : 'Revert to Active'}
-          </button>
+            <span>Revert to Active</span>
+          </LoadingButton>
         )}
       </div>
       

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { updateCustomerKYCStatus } from '@/app/actions'
 import { CheckCircle2, ShieldAlert, XCircle, RefreshCw, ShieldCheck } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 interface VerifyKYCButtonProps {
   customerId: string
@@ -71,36 +72,33 @@ export default function VerifyKYCButton({
       {/* Action Buttons for Owner / Manager */}
       <div className="flex items-center gap-2 pt-1 border-t border-border mt-1">
         {status !== 'VERIFIED' && (
-          <button
-            onClick={() => handleStatusChange('VERIFIED')}
-            disabled={loading}
-            className="flex-1 inline-flex items-center justify-center gap-1 bg-success text-success-foreground hover:bg-success/90 h-8 px-3 rounded text-xs font-medium transition-colors disabled:opacity-50"
+          <LoadingButton
+            onClick={async () => await handleStatusChange('VERIFIED')}
+            className="flex-1 inline-flex items-center justify-center gap-1 bg-success text-success-foreground hover:bg-success/90 h-8 px-3 rounded text-xs font-medium transition-colors"
           >
-            {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+            <ShieldCheck className="h-3.5 w-3.5" />
             <span>Approve KYC</span>
-          </button>
+          </LoadingButton>
         )}
 
         {status !== 'REJECTED' && (
-          <button
-            onClick={() => handleStatusChange('REJECTED')}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-1 bg-destructive/10 text-destructive hover:bg-destructive/20 h-8 px-3 rounded text-xs font-medium border border-destructive/20 transition-colors disabled:opacity-50"
+          <LoadingButton
+            onClick={async () => await handleStatusChange('REJECTED')}
+            className="inline-flex items-center justify-center gap-1 bg-destructive/10 text-destructive hover:bg-destructive/20 h-8 px-3 rounded text-xs font-medium border border-destructive/20 transition-colors"
           >
             <XCircle className="h-3.5 w-3.5" />
             <span>Reject</span>
-          </button>
+          </LoadingButton>
         )}
 
         {status !== 'UNVERIFIED' && (
-          <button
-            onClick={() => handleStatusChange('UNVERIFIED')}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-1 bg-background-secondary text-foreground-secondary hover:text-foreground h-8 px-2.5 rounded text-xs font-medium border border-border transition-colors disabled:opacity-50"
+          <LoadingButton
+            onClick={async () => await handleStatusChange('UNVERIFIED')}
+            className="inline-flex items-center justify-center gap-1 bg-background-secondary text-foreground-secondary hover:text-foreground h-8 px-2.5 rounded text-xs font-medium border border-border transition-colors"
             title="Reset verification status"
           >
             <RefreshCw className="h-3 w-3" /> Reset
-          </button>
+          </LoadingButton>
         )}
       </div>
     </div>

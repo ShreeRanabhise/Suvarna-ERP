@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createStaffMember } from '@/app/actions'
 import { UserCheck, X } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 interface Branch {
   id: string
@@ -36,13 +37,13 @@ export default function AddStaffDialog({ branches }: { branches: Branch[] }) {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
+      <LoadingButton
+        onClick={async () => setIsOpen(true)}
         className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover h-10 px-4 rounded-md font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <UserCheck className="h-4 w-4" />
         <span>Add Staff</span>
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div 
@@ -134,20 +135,20 @@ export default function AddStaffDialog({ branches }: { branches: Branch[] }) {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-border mt-8">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="px-4 h-10 border border-border hover:bg-background-secondary rounded-md text-sm font-medium text-foreground-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   Cancel
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="submit"
-                  disabled={loading}
-                  className="px-4 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  loading={loading}
+                  className="px-4 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  {loading ? 'Saving...' : 'Save Staff'}
-                </button>
+                  <span>Save Staff</span>
+                </LoadingButton>
               </div>
             </form>
           </div>

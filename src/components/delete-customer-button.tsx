@@ -3,20 +3,18 @@
 import { useState } from 'react'
 import { deleteCustomer } from '@/app/actions'
 import { Trash2, Loader2 } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 import { useRouter } from 'next/navigation'
 
 export default function DeleteCustomerButton({ customerId, customerName }: { customerId: string, customerName: string }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
-    setLoading(true)
     setError(null)
     const res = await deleteCustomer(customerId)
     if (!res.success) {
       setError(res.error)
-      setLoading(false)
     } else {
       setIsOpen(false)
     }
@@ -24,14 +22,14 @@ export default function DeleteCustomerButton({ customerId, customerName }: { cus
 
   return (
     <>
-      <button 
-        onClick={() => setIsOpen(true)}
+      <LoadingButton 
+        onClick={async () => setIsOpen(true)}
         className="p-1.5 text-slate-400 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         title="Delete Customer"
         aria-label={`Delete customer ${customerName}`}
       >
         <Trash2 className="h-4 w-4" />
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div 
@@ -56,20 +54,18 @@ export default function DeleteCustomerButton({ customerId, customerName }: { cus
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setIsOpen(false)}
-                disabled={loading}
+              <LoadingButton
+                onClick={async () => setIsOpen(false)}
                 className="px-4 h-9 text-sm font-medium border border-border text-foreground-secondary hover:bg-background-secondary rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Cancel
-              </button>
-              <button
+              </LoadingButton>
+              <LoadingButton
                 onClick={handleDelete}
-                disabled={loading}
                 className="px-4 h-9 text-sm font-medium text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md transition-colors flex items-center justify-center min-w-[100px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete Customer'}
-              </button>
+                Delete Customer
+              </LoadingButton>
             </div>
           </div>
         </div>

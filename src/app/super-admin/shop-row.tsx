@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toggleShopStatus } from './actions'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 type ShopWithDetails = {
   id: string
@@ -63,10 +64,10 @@ export default function ShopRow({ shop }: { shop: ShopWithDetails }) {
         <span className="text-foreground-muted ml-2 text-xs">Loans:</span> <strong className="font-mono text-foreground">{shop._count.loans}</strong>
       </td>
       <td className="px-5 py-4 text-right">
-        <button
+        <LoadingButton
           onClick={handleToggle}
-          disabled={loading}
-          className={`flex items-center gap-1.5 ml-auto text-xs font-medium py-1.5 px-3 rounded-md border transition-colors ${
+          loading={loading}
+          className={`flex items-center gap-1.5 ml-auto text-xs font-medium py-1.5 px-3 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
             suspended
               ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
               : 'bg-success/10 text-success border-success/20 hover:bg-success/20'
@@ -83,7 +84,7 @@ export default function ShopRow({ shop }: { shop: ShopWithDetails }) {
               <span>Active</span>
             </>
           )}
-        </button>
+        </LoadingButton>
       </td>
     </tr>
   )

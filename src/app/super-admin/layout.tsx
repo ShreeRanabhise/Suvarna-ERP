@@ -4,6 +4,7 @@ import { LayoutDashboard, ShieldAlert, LogOut } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { logout } from "@/app/login/actions"
 import prisma from "@/lib/prisma"
+import { LoadingButton } from "@/components/loading-button"
 
 export default async function SuperAdminLayout({
   children,
@@ -47,10 +48,10 @@ export default async function SuperAdminLayout({
         </div>
         <div className="mt-auto p-4 border-t">
           <form action={logout}>
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-destructive hover:bg-destructive/10">
+            <LoadingButton type="submit" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-destructive hover:bg-destructive/10">
               <LogOut className="h-4 w-4" />
-              Logout
-            </button>
+              <span>Logout</span>
+            </LoadingButton>
           </form>
         </div>
       </aside>

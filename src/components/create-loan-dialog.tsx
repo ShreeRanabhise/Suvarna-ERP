@@ -2,8 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { createLoan, lookupCustomer } from '@/app/actions'
-import { Landmark, X, UploadCloud, RefreshCw, Trash2, Eye, User, Search, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { Landmark, X, UploadCloud, RefreshCw, Trash2, Eye, User, Search, CheckCircle2, ShieldAlert, Banknote } from 'lucide-react'
 import { formatNumericCustomerId } from '@/lib/loan-utils'
+import { LoadingButton } from '@/components/loading-button'
 
 interface UploadedFileState {
   file: File | null
@@ -294,13 +295,13 @@ export default function CreateLoanDialog({
 
   return (
     <>
-      <button
+      <LoadingButton
         onClick={openDialog}
         className="flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover h-10 px-4 rounded-md font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm w-full sm:w-auto"
       >
         <Landmark className="h-4 w-4" />
         <span>Create Loan</span>
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div 
@@ -539,21 +540,20 @@ export default function CreateLoanDialog({
               )}
 
               <div className="md:col-span-2 flex items-center justify-end gap-3 pt-3 border-t border-border mt-2">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="px-4 py-2 rounded-md border border-border bg-background hover:bg-background-secondary text-sm font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   Cancel
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="submit"
-                  disabled={loading || goldPhoto.uploading}
-                  className="px-5 py-2 rounded-md bg-primary hover:bg-primary-hover text-sm font-medium text-primary-foreground transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-subtle flex items-center gap-2"
+                  loading={loading || goldPhoto.uploading}
+                  className="px-5 py-2 rounded-md bg-primary hover:bg-primary-hover text-sm font-medium text-primary-foreground transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-subtle"
                 >
-                  {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-                  <span>{loading ? 'Creating Loan...' : 'Create Gold Loan'}</span>
-                </button>
+                  <span>Create Gold Loan</span>
+                </LoadingButton>
               </div>
             </form>
           </div>

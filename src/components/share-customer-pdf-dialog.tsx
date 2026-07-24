@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FileText, Printer, X, User, Building, ShieldCheck, Package, Shield, Calendar, Sparkles } from 'lucide-react'
 import { formatNumericCustomerId } from '@/lib/loan-utils'
 import { formatAadhaar, formatPAN } from '@/lib/validation'
+import { LoadingButton } from '@/components/loading-button'
 
 interface PledgedItem {
   id: string
@@ -118,15 +119,15 @@ export default function ShareCustomerPdfDialog({ customer, shopName = 'Gold ERP'
 
   return (
     <>
-      <button
+      <LoadingButton
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={async () => setIsOpen(true)}
         className="flex items-center justify-center gap-2 bg-background hover:bg-background-secondary border border-border text-foreground h-10 px-4 rounded-md font-medium text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm w-full"
         title="Share & Print Customer Info PDF"
       >
         <FileText className="h-4 w-4 text-primary shrink-0" />
         <span>Customer Info</span>
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3 sm:p-6 animate-fade-in overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -190,22 +191,22 @@ export default function ShareCustomerPdfDialog({ customer, shopName = 'Gold ERP'
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={handlePrint}
+                  onClick={async () => handlePrint()}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-sm"
                 >
                   <Printer className="h-4 w-4" />
                   <span>Print / Save as PDF</span>
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
                   title="Close"
                 >
                   <X className="h-5 w-5" />
-                </button>
+                </LoadingButton>
               </div>
             </div>
 

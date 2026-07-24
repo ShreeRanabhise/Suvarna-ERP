@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import AddStaffDialog from "@/components/add-staff-dialog"
 import DeleteStaffButton from "@/components/delete-staff-button"
 import { Users, Building, ShieldCheck, Award, Sparkles, User, UserCheck, UserX } from "lucide-react"
+import { LoadingButton } from "@/components/loading-button"
 
 export default async function StaffPage() {
   const dbUser = await getCachedUser()
@@ -53,9 +54,9 @@ export default async function StaffPage() {
             </li>
           </ul>
         </div>
-        <button className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors mt-2 shadow-subtle">
-          Contact Sales to Upgrade
-        </button>
+        <LoadingButton className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors mt-2 shadow-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <span>Contact Sales to Upgrade</span>
+        </LoadingButton>
       </div>
     )
   }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { repayLoan } from '@/app/actions'
+import { LoadingButton } from '@/components/loading-button'
 
 export function RepaymentForm({ 
   loanId, 
@@ -102,13 +103,13 @@ export function RepaymentForm({
         <strong>Settlement Principle:</strong> Paid capital is allocated to accrued interest due first (₹{Math.round(interestDue).toLocaleString('en-IN')}). Remaining balances directly reduce outstanding principal. Principal reaching ₹0 closes the contract automatically.
       </div>
 
-      <button 
+      <LoadingButton 
         type="submit"
-        disabled={loading}
-        className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors shadow-sm disabled:opacity-50"
+        loading={loading}
+        className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        {loading ? 'Processing...' : 'Submit Payment Record'}
-      </button>
+        <span>Submit Payment Record</span>
+      </LoadingButton>
     </form>
   )
 }

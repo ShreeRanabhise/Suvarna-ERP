@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Printer, X, FileText, Landmark, Scale, Wallet, User } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 interface PaymentRecord {
   id: string
@@ -77,14 +78,14 @@ export default function PrintReceiptDialog({ loan, balances, shopName = 'Suvarna
   return (
     <>
       {/* Trigger Button */}
-      <button
+      <LoadingButton
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={async () => setIsOpen(true)}
         className="inline-flex items-center gap-1.5 border border-border bg-background hover:bg-background-secondary text-foreground px-3.5 py-1.5 rounded-md text-xs font-semibold shadow-subtle transition-colors cursor-pointer"
       >
         <Printer className="h-4 w-4 text-primary" />
         <span>Print Receipt</span>
-      </button>
+      </LoadingButton>
 
       {/* Modal Dialog Overlay */}
       {isOpen && (
@@ -149,22 +150,22 @@ export default function PrintReceiptDialog({ loan, balances, shopName = 'Suvarna
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={handlePrint}
+                  onClick={async () => handlePrint()}
                   className="inline-flex items-center gap-1.5 bg-black text-white hover:bg-gray-800 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors cursor-pointer"
                 >
                   <Printer className="h-4 w-4" />
                   <span>Print / Save as PDF</span>
-                </button>
+                </LoadingButton>
                 
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="p-1.5 text-black hover:bg-gray-200 rounded-md transition-colors"
                 >
                   <X className="h-5 w-5" />
-                </button>
+                </LoadingButton>
               </div>
             </div>
 

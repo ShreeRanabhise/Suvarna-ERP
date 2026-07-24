@@ -19,6 +19,7 @@ import {
   Phone,
   Eye
 } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 interface UploadedFileState {
   file: File | null
@@ -575,13 +576,13 @@ export default function CreateCustomerDialog() {
 
   return (
     <>
-      <button
-        onClick={() => { setIsOpen(true); setError(null) }}
+      <LoadingButton
+        onClick={async () => { setIsOpen(true); setError(null) }}
         className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover h-10 px-4 rounded-md font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm"
       >
         <User className="h-4 w-4" />
         <span>Add Customer</span>
-      </button>
+      </LoadingButton>
 
       {isOpen && (
         <div 
@@ -988,27 +989,20 @@ export default function CreateCustomerDialog() {
 
               {/* Form Footer Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
-                <button
+                <LoadingButton
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={async () => setIsOpen(false)}
                   className="px-4 h-10 border border-border hover:bg-background-secondary rounded-md text-sm font-medium text-foreground-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   Cancel
-                </button>
-                <button
+                </LoadingButton>
+                <LoadingButton
                   type="submit"
-                  disabled={loading}
-                  className="px-5 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm"
+                  loading={loading}
+                  className="px-5 h-10 bg-primary text-primary-foreground hover:bg-primary-hover rounded-md text-sm font-medium transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm"
                 >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Saving Customer...</span>
-                    </>
-                  ) : (
-                    <span>Save Customer</span>
-                  )}
-                </button>
+                  <span>Save Customer</span>
+                </LoadingButton>
               </div>
 
             </form>

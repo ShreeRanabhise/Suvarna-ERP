@@ -1,37 +1,33 @@
 'use client'
 
-import { useTransition } from 'react'
 import { deleteStaffMember } from '@/app/actions'
 import { Trash2 } from 'lucide-react'
+import { LoadingButton } from '@/components/loading-button'
 
 export default function DeleteStaffButton({ staffId, staffName }: { staffId: string, staffName: string }) {
-  const [isPending, startTransition] = useTransition()
 
   async function handleDelete() {
     if (confirm(`Are you sure you want to remove ${staffName} as a staff member?`)) {
-      startTransition(async () => {
-        try {
-          const res = await deleteStaffMember(staffId)
-          if (!res.success) {
-            alert(res.error)
-            return
-          }
-        } catch (error: unknown) {
-          alert(error instanceof Error ? error.message : 'Something went wrong')
+      try {
+        const res = await deleteStaffMember(staffId)
+        if (!res.success) {
+          alert(res.error)
+          return
         }
-      })
+      } catch (error: unknown) {
+        alert(error instanceof Error ? error.message : 'Something went wrong')
+      }
     }
   }
 
   return (
-    <button
+    <LoadingButton
       onClick={handleDelete}
-      disabled={isPending}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       title="Remove Staff Member"
       aria-label={`Remove staff member ${staffName}`}
     >
       <Trash2 className="h-4 w-4" />
-    </button>
+    </LoadingButton>
   )
 }

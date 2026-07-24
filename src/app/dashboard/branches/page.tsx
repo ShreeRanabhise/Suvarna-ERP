@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import AddBranchDialog from "@/components/add-branch-dialog"
 import DeleteBranchButton from "@/components/delete-branch-button"
 import { Building, Users, Banknote, Award, Sparkles, MapPin } from "lucide-react"
+import { LoadingButton } from "@/components/loading-button"
 
 export default async function BranchesPage() {
   const dbUser = await getCachedUser()
@@ -53,9 +54,9 @@ export default async function BranchesPage() {
             </li>
           </ul>
         </div>
-        <button className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors mt-2 shadow-subtle">
-          Contact Sales to Upgrade
-        </button>
+        <LoadingButton className="w-full bg-primary text-primary-foreground hover:bg-primary-hover h-10 rounded-md font-medium text-sm transition-colors mt-2 shadow-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <span>Contact Sales to Upgrade</span>
+        </LoadingButton>
       </div>
     )
   }
