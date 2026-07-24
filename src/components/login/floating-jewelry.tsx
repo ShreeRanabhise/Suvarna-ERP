@@ -8,99 +8,147 @@ interface FloatingJewelryProps {
   type: JewelryType
   style?: React.CSSProperties
   className?: string
+  duration?: number
+  delay?: number
 }
 
 const SVGS = {
   ring: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {/* Band */}
-      <path d="M22 32C22 43.0457 30.9543 52 42 52C53.0457 52 62 43.0457 62 32C62 20.9543 53.0457 12 42 12" />
-      <path d="M22 32C22 20.9543 30.9543 12 42 12" opacity="0.3" />
-      {/* Diamond */}
-      <path d="M12 22L22 32L32 22L26 12H18L12 22Z" />
-      <path d="M12 22H32M18 12L22 22L26 12" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#BF953F" />
+          <stop offset="25%" stopColor="#FCF6BA" />
+          <stop offset="50%" stopColor="#B38728" />
+          <stop offset="75%" stopColor="#FBF5B7" />
+          <stop offset="100%" stopColor="#AA771C" />
+        </linearGradient>
+        <linearGradient id="gold-grad-light" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#E2C15A" />
+          <stop offset="50%" stopColor="#FFFCA8" />
+          <stop offset="100%" stopColor="#C99B2B" />
+        </linearGradient>
+        <radialGradient id="diamond" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="40%" stopColor="#E6F2FF" />
+          <stop offset="80%" stopColor="#B3D9FF" />
+          <stop offset="100%" stopColor="#80BFFF" />
+        </radialGradient>
+      </defs>
+      <g>
+        <path d="M 22 36 C 22 47.0457 30.9543 56 42 56 C 53.0457 56 62 47.0457 62 36 C 62 24.9543 53.0457 16 42 16 C 30.9543 16 22 24.9543 22 36 Z" fill="none" stroke="url(#gold-grad)" strokeWidth="6" />
+        <polygon points="42,4 34,14 50,14" fill="url(#diamond)" stroke="#80BFFF" strokeWidth="0.5"/>
+        <polygon points="34,14 42,24 50,14" fill="url(#diamond)" stroke="#80BFFF" strokeWidth="0.5"/>
+        <polygon points="34,14 42,14 42,4" fill="#FFFFFF" opacity="0.6"/>
+      </g>
     </svg>
   ),
   necklace: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 8C12 25.6731 26.3269 40 44 40C61.6731 40 76 25.6731 76 8" strokeDasharray="3 3" />
-      <path d="M44 40V48" />
-      <circle cx="44" cy="52" r="4" />
-      <path d="M44 56L40 60H48L44 56Z" />
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 10 20 C 10 45 30 65 40 65 C 50 65 70 45 70 20" fill="none" stroke="url(#gold-grad)" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="40" cy="70" r="8" fill="url(#gold-grad-light)" />
+      <polygon points="40,64 36,70 40,76 44,70" fill="url(#diamond)" />
     </svg>
   ),
   coin: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="32" cy="32" r="28" />
-      <circle cx="32" cy="32" r="22" strokeDasharray="4 4" />
-      <path d="M32 18V46M24 26H40M24 38H40" />
-      <circle cx="32" cy="32" r="4" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="28" fill="url(#gold-grad)" />
+      <circle cx="32" cy="32" r="24" fill="url(#gold-grad-light)" />
+      <circle cx="32" cy="32" r="22" fill="url(#gold-grad)" stroke="#FCF6BA" strokeWidth="1" />
+      <text x="32" y="38" fontSize="16" fontFamily="serif" fontWeight="bold" fill="#AA771C" textAnchor="middle">24K</text>
     </svg>
   ),
   bangles: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <ellipse cx="32" cy="24" rx="28" ry="12" />
-      <ellipse cx="32" cy="32" rx="28" ry="12" opacity="0.7" />
-      <ellipse cx="32" cy="40" rx="28" ry="12" opacity="0.4" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="22" rx="28" ry="10" fill="none" stroke="url(#gold-grad)" strokeWidth="6" />
+      <ellipse cx="32" cy="32" rx="28" ry="10" fill="none" stroke="url(#gold-grad-light)" strokeWidth="6" />
+      <ellipse cx="32" cy="42" rx="28" ry="10" fill="none" stroke="url(#gold-grad)" strokeWidth="6" />
     </svg>
   ),
   bar: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 20L22 12H50L58 20V44L50 52H22L14 44V20Z" />
-      <path d="M22 12V36L14 44M50 12V36L58 44M22 36H50" />
-      <circle cx="36" cy="24" r="4" />
-      <path d="M32 24H40" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 12 24 L 24 12 L 56 12 L 44 24 Z" fill="url(#gold-grad-light)" />
+      <path d="M 56 12 L 56 40 L 44 52 L 44 24 Z" fill="url(#gold-grad)" />
+      <path d="M 12 24 L 44 24 L 44 52 L 12 52 Z" fill="url(#gold-grad)" />
+      <text x="28" y="42" fontSize="8" fontFamily="sans-serif" fontWeight="bold" fill="#8C5C00" transform="skewX(-15)">999.9</text>
+      <text x="28" y="32" fontSize="6" fontFamily="sans-serif" fill="#8C5C00" transform="skewX(-15)">GOLD</text>
     </svg>
   ),
   mangalsutra: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {/* Double chain */}
-      <path d="M8 12C12 36 24 48 32 48C40 48 52 36 56 12" strokeDasharray="1 3" />
-      <path d="M12 10C15.3333 34 26.3333 45 32 45C37.6667 45 48.6667 34 52 10" strokeDasharray="1 3" />
-      {/* Watis (Twin cups) */}
-      <path d="M26 48C26 52 28.6863 56 32 56C35.3137 56 38 52 38 48" />
-      <circle cx="28" cy="48" r="2" />
-      <circle cx="36" cy="48" r="2" />
-      <path d="M32 56L32 60" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 12 12 C 12 36 24 48 32 48 C 40 48 52 36 52 12" fill="none" stroke="#222" strokeWidth="2.5" strokeDasharray="4 2" />
+      <path d="M 16 12 C 16 34 26 44 32 44 C 38 44 48 34 48 12" fill="none" stroke="url(#gold-grad)" strokeWidth="1.5" />
+      <path d="M 26 48 C 26 53 28 56 32 56 C 36 56 38 53 38 48" fill="url(#gold-grad)" />
+      <circle cx="28" cy="48" r="3.5" fill="url(#gold-grad-light)" />
+      <circle cx="36" cy="48" r="3.5" fill="url(#gold-grad-light)" />
     </svg>
   ),
   pendant: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M32 8L32 16" />
-      <path d="M32 16C40 16 48 24 48 36C48 48 32 60 32 60C32 60 16 48 16 36C16 24 24 16 32 16Z" />
-      <circle cx="32" cy="36" r="8" />
-      <path d="M32 28V32M32 40V44M24 36H28M36 36H40" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 32 4 L 32 12" stroke="url(#gold-grad)" strokeWidth="4" />
+      <circle cx="32" cy="34" r="18" fill="url(#gold-grad-light)" />
+      <circle cx="32" cy="34" r="12" fill="url(#gold-grad)" />
+      <polygon points="32,24 26,34 32,44 38,34" fill="url(#diamond)" />
     </svg>
   ),
   earrings: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {/* Left Earring */}
-      <path d="M22 12C22 12 24 18 22 24" />
-      <path d="M16 24C16 24 22 20 28 24C28 32 16 32 16 24Z" />
-      <path d="M18 30V38M22 32V40M26 30V38" />
-      {/* Right Earring */}
-      <path d="M42 12C42 12 44 18 42 24" />
-      <path d="M36 24C36 24 42 20 48 24C48 32 36 32 36 24Z" />
-      <path d="M38 30V38M42 32V40M46 30V38" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 22 12 Q 22 20 22 24" stroke="url(#gold-grad)" strokeWidth="2" fill="none" />
+      <path d="M 14 24 L 30 24 L 26 38 L 18 38 Z" fill="url(#gold-grad)" />
+      <circle cx="22" cy="42" r="4" fill="url(#gold-grad-light)" />
+      <circle cx="16" cy="39" r="2.5" fill="url(#gold-grad-light)" />
+      <circle cx="28" cy="39" r="2.5" fill="url(#gold-grad-light)" />
+      <path d="M 42 12 Q 42 20 42 24" stroke="url(#gold-grad)" strokeWidth="2" fill="none" />
+      <path d="M 34 24 L 50 24 L 46 38 L 38 38 Z" fill="url(#gold-grad)" />
+      <circle cx="42" cy="42" r="4" fill="url(#gold-grad-light)" />
+      <circle cx="36" cy="39" r="2.5" fill="url(#gold-grad-light)" />
+      <circle cx="48" cy="39" r="2.5" fill="url(#gold-grad-light)" />
     </svg>
   ),
   chain: (
-    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="28" y="8" width="8" height="16" rx="4" transform="rotate(45 32 16)" />
-      <rect x="28" y="24" width="8" height="16" rx="4" transform="rotate(-45 32 32)" />
-      <rect x="28" y="40" width="8" height="16" rx="4" transform="rotate(45 32 48)" />
-      <path d="M32 8V4M32 60V56" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="28" cy="16" rx="6" ry="12" fill="none" stroke="url(#gold-grad)" strokeWidth="4" transform="rotate(45 28 16)" />
+      <ellipse cx="36" cy="30" rx="6" ry="12" fill="none" stroke="url(#gold-grad-light)" strokeWidth="4" transform="rotate(-45 36 30)" />
+      <ellipse cx="28" cy="44" rx="6" ry="12" fill="none" stroke="url(#gold-grad)" strokeWidth="4" transform="rotate(45 28 44)" />
+      <ellipse cx="36" cy="58" rx="6" ry="12" fill="none" stroke="url(#gold-grad-light)" strokeWidth="4" transform="rotate(-45 36 58)" />
     </svg>
   )
 }
 
-export function FloatingJewelry({ type, style, className = "" }: FloatingJewelryProps) {
+export function FloatingJewelry({ type, style, className = "", duration = 20, delay = 0 }: FloatingJewelryProps) {
+  // Random range helper
+  const rr = (min: number, max: number) => Math.random() * (max - min) + min;
+
+  // Generate random movement paths (distances in vw/vh to ensure they drift nicely)
+  // We keep it within -3 to 3 to ensure they never break out of their grid cells and overlap.
+  const x1 = rr(-3, 3); const y1 = rr(-3, 3);
+  const x2 = rr(-3, 3); const y2 = rr(-3, 3);
+  
+  // Rotations for subtle spin (±3° to ±8°)
+  const rotMax = rr(3, 8);
+  const r1 = Math.random() > 0.5 ? rotMax : -rotMax;
+  const r2 = Math.random() > 0.5 ? rotMax : -rotMax;
+
+  const animationStyle = {
+    ...style,
+    "--x1": `${x1}vw`,
+    "--y1": `${y1}vh`,
+    "--x2": `${x2}vw`,
+    "--y2": `${y2}vh`,
+    "--r1": `${r1}deg`,
+    "--r2": `${r2}deg`,
+    "--anim-duration": `${duration}s`,
+    "--anim-delay": `${delay}s`,
+    animation: "randomWander var(--anim-duration) ease-in-out var(--anim-delay) infinite",
+    willChange: "transform"
+  } as React.CSSProperties
+
   return (
     <div 
-      className={`absolute will-change-transform ${className}`} 
-      style={style}
+      className={`absolute ${className}`} 
+      style={animationStyle}
     >
-      <div className="w-full h-full animate-spin-slow">
+      <div className="w-full h-full">
         {SVGS[type]}
       </div>
     </div>

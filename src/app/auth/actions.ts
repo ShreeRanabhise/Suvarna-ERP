@@ -26,7 +26,7 @@ export async function requestPasswordReset(formData: FormData) {
     redirect('/auth/forgot-password?error=Could not send reset link. Please try again.')
   }
 
-  redirect('/auth/forgot-password?message=Check your email for the secure reset link.')
+  redirect(`/auth/verify-otp?email=${encodeURIComponent(email)}&message=Check your email for the 6-digit verification code.`)
 }
 
 export async function updatePassword(formData: FormData) {
@@ -55,4 +55,29 @@ export async function updatePassword(formData: FormData) {
   await supabase.auth.signOut()
 
   redirect('/login?message=Password updated successfully. Please log in with your new credentials.')
+}
+
+export async function verifyRecoveryOtp(formData: FormData) {
+  const email = formData.get('email') as string
+  const token = formData.get('token') as string
+  const supabase = await createClient()
+
+  if (!email || !token) {
+    redirect('/auth/verify-otp?error=Email and code are required')
+  }
+
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'recovery',
+  })
+
+  if (error) {
+    console.error('Verify OTP error:', error)
+    redirect(`/auth/verify-otp?email=${encodeURIComponent(email)}&error=Invalid or expired code. Please try again.`)
+  }
+
+  // Session is established upon successful verifyOtp.
+  // Redirect to update password page.
+  redirect('/auth/update-password')
 }
