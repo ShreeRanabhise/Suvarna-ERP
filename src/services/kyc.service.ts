@@ -41,31 +41,54 @@ export class KYCService {
     const fileName = `kyc_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // 1. Save locally to public/uploads/kyc/{shopId}/{branchId}/
     const relativeDirPath = `/uploads/kyc/${shopId}/${branchId}`
     const absoluteDirPath = path.join(process.cwd(), 'public', 'uploads', 'kyc', shopId, branchId)
-    await fs.mkdir(absoluteDirPath, { recursive: true })
-
     const absoluteFilePath = path.join(absoluteDirPath, fileName)
-    await fs.writeFile(absoluteFilePath, buffer)
+    
+    let publicUrl = `${relativeDirPath}/${fileName}`
+    let localSaveSuccess = false
 
-    const publicUrl = `${relativeDirPath}/${fileName}`
+    // 1. Try to save locally to public/uploads/kyc/{shopId}/{branchId}/
+    try {
+      await fs.mkdir(absoluteDirPath, { recursive: true })
+      await fs.writeFile(absoluteFilePath, buffer)
+      localSaveSuccess = true
+    } catch (err) {
+      console.warn('Failed to save file locally (likely running in serverless environment):', err)
+      // We will rely on Supabase if local save fails
+    }
 
-    // 2. Optionally sync with Supabase Storage
+    // 2. Sync with Supabase Storage
     const supabase = getAdminClient()
     if (supabase) {
       try {
         await this.ensureBucketExists(supabase)
         const storagePath = `${shopId}/${branchId}/${fileName}`
-        await supabase.storage
+        const { data, error } = await supabase.storage
           .from(BUCKET_NAME)
           .upload(storagePath, buffer, {
             contentType: file.type || 'image/jpeg',
             upsert: true
           })
-      } catch {
-        // Local file is preserved even if Supabase sync fails
+          
+        if (error && !localSaveSuccess) {
+          throw new Error('Storage failed: Could not write locally or to cloud.')
+        }
+        
+        if (!error) {
+          const { data: publicUrlData } = supabase.storage
+            .from(BUCKET_NAME)
+            .getPublicUrl(storagePath)
+            
+          publicUrl = publicUrlData.publicUrl
+        }
+      } catch (err) {
+        if (!localSaveSuccess) {
+          throw err
+        }
       }
+    } else if (!localSaveSuccess) {
+      throw new Error('Storage failed: Local filesystem is read-only and Supabase is not configured.')
     }
 
     return publicUrl
